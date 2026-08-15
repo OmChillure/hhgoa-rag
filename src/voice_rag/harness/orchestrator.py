@@ -1,0 +1,226 @@
+"""Structured harness around retrieval + answering.
+
+Not a raw prompt-in / text-out call. Every turn is a tool graph with:
+- typed inputs/outputs
+- explicit retries and fallbacks
+- a recorded trace
+- first-class refusal
+
+Fast path (default, SLA): compiled DAG, no LLM.
+Quality path: Gemini (free) or SpaceXAI composer on the same retrieve/ground tools.
+"""
+
+from __future__ import annotations
+
+from typing import Any, Callable, Literal
+
+from voice_rag.generation.extractive import extract
+from voice_rag.generation.composer import compose as llm_compose
+from voice_rag.guardrails.policy import (
+    check_grounding,
+    check_input,
+    check_retrieval,
+    refusal_text,
+)
+from voice_rag.latency.metrics import Stopwatch
+from voice_rag.retrieval.hybrid import HybridRetriever
+from voice_rag.textutil import detect_language, infer_query_type
+from voice_rag.types import Answer, GuardDecision, Hit, PipelineResult
+
+
+Mode = Literal["fast", "quality"]
+
+
+class ToolError(Exception):
+    def __init__(self, tool: str, message: str) -> None:
+        super().__init__(message)
+        self.tool = tool
+        self.message = message
+
+
+class Harness:
+    def __init__(self, retriever: HybridRetriever) -> None:
+        self.retriever = retriever
+        self.tools: dict[str, Callable[..., Any]] = {
+            "safety_check": self.tool_safety_check,
+            "classify_query": self.tool_classify,
+            "retrieve": self.tool_retrieve,
+            "extract_answer": self.tool_extract,
+            "ground_check": self.tool_ground,
+            "compose_answer": self.tool_compose,
+            "refuse": self.tool_refuse,
+        }
+
+    def run(self, query: str, mode: Mode = "fast") -> PipelineResult:
+        clock = Stopwatch()
+        trace: list[dict[str, Any]] = []
+        guards: list[GuardDecision] = []
+
+        def call(name: str, **kwargs: Any) -> Any:
+            retries = 1 if name in {"retrieve", "extract_answer"} else 0
+            last_exc: Exception | None = None
+            for attempt in range(retries + 1):
+                with clock.span(name if attempt == 0 else f"{name}:retry{attempt}"):
+                    try:
+                        result = self.tools[name](**kwargs)
+                        trace.append(
+                            {
+                                "tool": name,
+                                "attempt": attempt,
+                                "ok": True,
+                                "input_keys": sorted(kwargs.keys()),
+                            }
+                        )
+                        return result
+                    except ToolError as exc:
+                        last_exc = exc
+                        trace.append(
+                            {
+                                "tool": name,
+                                "attempt": attempt,
+                                "ok": False,
+                                "error": exc.message,
+                            }
+                        )
+            raise last_exc or ToolError(name, "unknown")
+
+        safety: GuardDecision = call("safety_check", query=query)
+        guards.append(safety)
+        if not safety.allowed:
+            ans = call("refuse", reason=safety.reason)
+            return self._finish(query, ans, guards, [], clock, trace, safety)
+
+        meta = call("classify_query", query=query)
+        hits: list[Hit] = call(
+            "retrieve",
+            query=query,
+            language=meta["language"],
+            query_type=meta["query_type"],
+        )
+        ret = check_retrieval(hits, query)
+        guards.append(ret)
+        if not ret.allowed:
+            # one recovery: drop language preference by retrying as English
+            if meta["language"] != "en":
+                hits = call("retrieve", query=query, language="en", query_type=meta["query_type"])
+                ret = check_retrieval(hits, query)
+                guards.append(ret)
+            if not ret.allowed:
+                ans = call("refuse", reason=ret.reason)
+                return self._finish(query, ans, guards, hits, clock, trace, meta)
+
+        extracted = call(
+            "extract_answer",
+            query=query,
+            hits=hits,
+            query_type=meta["query_type"],
+        )
+        ground = call("ground_check", answer=extracted["text"], hits=hits)
+        guards.append(ground)
+
+        if mode == "quality":
+            composed = call("compose_answer", query=query, hits=hits)
+            if composed and composed.get("answer"):
+                g2 = call("ground_check", answer=composed["answer"], hits=hits)
+                guards.append(g2)
+                if g2.allowed:
+                    extracted = {
+                        "text": composed["answer"],
+                        "spans": extracted.get("spans") or [],
+                        "confidence": max(extracted.get("confidence", 0.0), 0.7),
+                        "mode": composed.get("_provider") or "llm",
+                    }
+                    ground = g2
+
+        if not ground.allowed:
+            # recovery: try the next extractive span if any
+            if extracted.get("alts"):
+                for alt in extracted["alts"][:2]:
+                    g_alt = check_grounding(alt, hits)
+                    guards.append(g_alt)
+                    if g_alt.allowed:
+                        extracted["text"] = alt
+                        ground = g_alt
+                        break
+            if not ground.allowed:
+                ans = call("refuse", reason=ground.reason)
+                ans.citations = hits[:3]
+                return self._finish(query, ans, guards, hits, clock, trace, meta)
+
+        ans = Answer(
+            text=extracted["text"],
+            mode=extracted.get("mode", "extractive"),
+            confidence=float(extracted.get("confidence") or 0.0),
+            spans=extracted.get("spans") or [],
+            citations=hits[:4],
+            grounded=True,
+            coverage=float((ground.details or {}).get("coverage") or 0.0),
+            refused=False,
+        )
+        return self._finish(query, ans, guards, hits, clock, trace, meta)
+
+    def _finish(
+        self,
+        query: str,
+        answer: Answer,
+        guards: list[GuardDecision],
+        hits: list[Hit],
+        clock: Stopwatch,
+        trace: list[dict[str, Any]],
+        meta: GuardDecision | dict[str, Any],
+    ) -> PipelineResult:
+        lang = "en"
+        qtype = "UNKNOWN"
+        if isinstance(meta, dict):
+            lang = meta.get("language", "en")
+            qtype = meta.get("query_type", "UNKNOWN")
+        total = clock.total_ms
+        return PipelineResult(
+            query=query,
+            detected_language=lang,
+            query_type=qtype,
+            answer=answer,
+            guardrails=guards,
+            hits=hits,
+            timings=clock.to_list(),
+            total_ms=total,
+            sla_ok=total < 200.0,
+            harness_trace=trace,
+        )
+
+    # ----- tools -----
+    def tool_safety_check(self, query: str) -> GuardDecision:
+        return check_input(query)
+
+    def tool_classify(self, query: str) -> dict[str, str]:
+        return {
+            "language": detect_language(query),
+            "query_type": infer_query_type(query),
+        }
+
+    def tool_retrieve(self, query: str, language: str, query_type: str) -> list[Hit]:
+        try:
+            return self.retriever.search(query, language=language, query_type=query_type)
+        except Exception as exc:  # noqa: BLE001
+            raise ToolError("retrieve", str(exc)) from exc
+
+    def tool_extract(self, query: str, hits: list[Hit], query_type: str) -> dict[str, Any]:
+        text, spans, conf = extract(query, hits, query_type)
+        alts = [s.text for s in spans[1:]]
+        return {"text": text, "spans": spans, "confidence": conf, "alts": alts, "mode": "extractive"}
+
+    def tool_ground(self, answer: str, hits: list[Hit]) -> GuardDecision:
+        return check_grounding(answer, hits)
+
+    def tool_compose(self, query: str, hits: list[Hit]) -> dict[str, Any] | None:
+        return llm_compose(query, hits)
+
+    def tool_refuse(self, reason: str) -> Answer:
+        return Answer(
+            text=refusal_text(reason),
+            mode="refuse",
+            confidence=1.0,
+            refused=True,
+            refusal_reason=reason,
+            grounded=True,
+        )

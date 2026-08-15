@@ -1,0 +1,632 @@
+[
+  {
+    "query_id": 1102432,
+    "query_type": "DESCRIPTION",
+    "en_query": "what is a corporation?",
+    "hi_query": "कॉर्पोरेशन क्या है?",
+    "en_answer": "A corporation is a company or group of people authorized to act as a single entity and recognized as such in law.",
+    "hi_answer": "निगम एक कंपनी या लोगों का समूह होता है जो एक एकल इकाई के रूप में कार्य करने के लिए अधिकृत होता है और कानून में इस प्रकार से मान्यता प्राप्त होती है।",
+    "gold_en": [
+      "en-39601aecae02d5d9"
+    ],
+    "gold_hi": [
+      "hi-4b94bbbb857e2e59"
+    ]
+  },
+  {
+    "query_id": 1047544,
+    "query_type": "DESCRIPTION",
+    "en_query": "what is quartz in perfectly elastic body",
+    "hi_query": "एक पूरी तरह से लोचदार शरीर में क्वार्ट्ज़ क्या होता है",
+    "en_answer": "A perfectly elastic collision is defined as one in which there is no loss of kinetic energy in the collision.",
+    "hi_answer": "एक पूर्णतया लोचदार टक्कर को उस तरह से परिभाषित किया जाता है जिसमें टक्कर में गतिज ऊर्जा का कोई नुकसान नहीं होता है।",
+    "gold_en": [
+      "en-a457ff2bc1101f3f"
+    ],
+    "gold_hi": [
+      "hi-872568e47c6ebbbe"
+    ]
+  },
+  {
+    "query_id": 1040703,
+    "query_type": "DESCRIPTION",
+    "en_query": "what is the difference between giant slalom and downhill racing",
+    "hi_query": "जायंट स्लैलम और डाउनहिल रेसिंग में क्या अंतर है",
+    "en_answer": "The difference is the distance of the gates relative to each other.",
+    "hi_answer": "अंतर एक-दूसरे के सापेक्ष द्वारों की दूरी है।",
+    "gold_en": [
+      "en-c1c3072537dba672"
+    ],
+    "gold_hi": [
+      "hi-f1d63fc53706b242"
+    ]
+  },
+  {
+    "query_id": 1033930,
+    "query_type": "DESCRIPTION",
+    "en_query": "what is the purpose of a birds air sac",
+    "hi_query": "पक्षियों के वायु थैले का क्या उद्देश्य है",
+    "en_answer": "The purpose of a birds air sac is the passageway for air to be breathed in and out of the trachea and to ventilate their lungs by allowing a unidirectional flow of air through the lungs.",
+    "hi_answer": "पक्षियों के वायु थैली का उद्देश्य वायु को श्वसन पथ से अंदर और बाहर ले जाने और फेफड़ों के माध्यम से वायु के एकदिशात्मक प्रवाह को अनुमति देकर उनके फेफड़ों को हवादार बनाना है।",
+    "gold_en": [
+      "en-d373a6bd1b68efbe",
+      "en-bad0e4e7064e1888"
+    ],
+    "gold_hi": [
+      "hi-dd9f4fb186180dd0",
+      "hi-be3f606c7c2476ec"
+    ]
+  },
+  {
+    "query_id": 1024205,
+    "query_type": "ENTITY",
+    "en_query": "what natural resource can you find in grasslands",
+    "hi_query": "आपको घास के मैदानों में कौन से प्राकृतिक संसाधन मिल सकते हैं",
+    "en_answer": "Wind is a natural source in grasslands.",
+    "hi_answer": "घास के मैदानों में हवा एक प्राकृतिक स्रोत है।",
+    "gold_en": [
+      "en-9479141943d2f91a"
+    ],
+    "gold_hi": [
+      "hi-dca914c144ae47f6"
+    ]
+  },
+  {
+    "query_id": 1089432,
+    "query_type": "DESCRIPTION",
+    "en_query": "tribulus libido",
+    "hi_query": "त्रिशूल कामेच्छा",
+    "en_answer": "Tribulus is a plant known to provide energy and enhance libido.",
+    "hi_answer": "ट्राइबुलस एक पौधा है जो ऊर्जा प्रदान करने और कामेच्छा बढ़ाने के लिए जाना जाता है।",
+    "gold_en": [
+      "en-35566c90662d81fb"
+    ],
+    "gold_hi": [
+      "hi-3b270e552acf0d39"
+    ]
+  },
+  {
+    "query_id": 998023,
+    "query_type": "LOCATION",
+    "en_query": "where is pillager mn",
+    "hi_query": "कहाँ पर वहाँ भोजन की कमी है",
+    "en_answer": "Pillager is a city in Cass County, Minnesota.",
+    "hi_answer": "पिल्लेगर मिनेसोटा के कैस काउंटी में एक शहर है।",
+    "gold_en": [
+      "en-76930317931032a1"
+    ],
+    "gold_hi": [
+      "hi-6159d0f2d45ba64d"
+    ]
+  },
+  {
+    "query_id": 988288,
+    "query_type": "DESCRIPTION",
+    "en_query": "definition of lipase",
+    "hi_query": "लाइपेज़ की परिभाषा",
+    "en_answer": "The definition of lipase is any of a group of enzymes that catalyze the hydrolysis of fats into glycerol and fatty acids.",
+    "hi_answer": "लिपेज़ की परिभाषा किसी भी एंजाइम समूह में से एक है जो वसा को ग्लिसरॉल और फैटी एसिड में जलीयक्रिया को उत्प्रेरित करता है।",
+    "gold_en": [
+      "en-6d6cd5d1e8e86fbd"
+    ],
+    "gold_hi": [
+      "hi-821a319e5d962ed5"
+    ]
+  },
+  {
+    "query_id": 153274,
+    "query_type": "NUMERIC",
+    "en_query": "distance between rogers, ar to tulsa ok",
+    "hi_query": "रोगर्स के बीच की दूरी, अर तो तुलसा ठीक है",
+    "en_answer": "119 miles or 192 kilometers.",
+    "hi_answer": "119 मील या 192 किलोमीटर।",
+    "gold_en": [
+      "en-ede07add0674b1c6"
+    ],
+    "gold_hi": [
+      "hi-c84e150d6cda272b"
+    ]
+  },
+  {
+    "query_id": 150394,
+    "query_type": "DESCRIPTION",
+    "en_query": "different types of evidence",
+    "hi_query": "विभिन्न प्रकार के साक्ष्य",
+    "en_answer": "Videotapes/Photographs,Witness Testimony,Fingerprints.",
+    "hi_answer": "वीडियोटेप्स/फोटोग्राफ्स, गवाही टेस्टिमोनी, फिंगरप्रिंट्स।",
+    "gold_en": [
+      "en-4dc887cd0bfd96b1",
+      "en-1931dc97a4fdd0b8",
+      "en-a2e0f05239f07597"
+    ],
+    "gold_hi": [
+      "hi-426cf797cad986e9",
+      "hi-cb978f71cabbda7f",
+      "hi-c60c7747c3901fb4"
+    ]
+  },
+  {
+    "query_id": 67577,
+    "query_type": "DESCRIPTION",
+    "en_query": "can gas cause pain in shoulder",
+    "hi_query": "क्या गैस कंधे में दर्द का कारण बन सकती है?",
+    "en_answer": "Yes,Any abdominal problem cause pain in the shoulder.",
+    "hi_answer": "हाँ, पेट की कोई भी समस्या कंधे में दर्द का कारण बनती है।",
+    "gold_en": [
+      "en-59d84cca394df230"
+    ],
+    "gold_hi": [
+      "hi-39a5d3ed33a48afd"
+    ]
+  },
+  {
+    "query_id": 269926,
+    "query_type": "NUMERIC",
+    "en_query": "how long to cook pie dough",
+    "hi_query": "पाई का आटा पकाने के लिए कितना समय लगेगा।",
+    "en_answer": "About 25 minutes.",
+    "hi_answer": "लगभग 25 मिनट।",
+    "gold_en": [
+      "en-fd64202b91aefc44"
+    ],
+    "gold_hi": [
+      "hi-3860137f189f7fae"
+    ]
+  },
+  {
+    "query_id": 12777,
+    "query_type": "NUMERIC",
+    "en_query": "age babies start talking",
+    "hi_query": "बच्चे बोलने लगते हैं।",
+    "en_answer": "From 18 to 24 Months.",
+    "hi_answer": "18 से 24 महीने तक।",
+    "gold_en": [
+      "en-c023a3e2a8476efc"
+    ],
+    "gold_hi": [
+      "hi-7dca7c4f95b3e683"
+    ]
+  },
+  {
+    "query_id": 625118,
+    "query_type": "DESCRIPTION",
+    "en_query": "what do the blood components do?",
+    "hi_query": "रक्त के घटक क्या करते हैं?",
+    "en_answer": "1 transporting oxygen and nutrients to the lungs and tissues.2 forming blood clots to prevent excess blood loss.3 carrying cells and antibodies that fight infection.",
+    "hi_answer": "1. फेफड़ों और ऊतकों तक ऑक्सीजन और पोषक तत्वों का परिवहन।2. अतिरिक्त रक्त हानि को रोकने के लिए रक्त के थक्के बनाना।3. संक्रमण से लड़ने वाली कोशिकाओं और एंटीबॉडी को ले जाना।",
+    "gold_en": [
+      "en-ac1efe9bc42bae81"
+    ],
+    "gold_hi": [
+      "hi-021e72afbfd14a49"
+    ]
+  },
+  {
+    "query_id": 598210,
+    "query_type": "ENTITY",
+    "en_query": "what color is real honey",
+    "hi_query": "असली शहद का रंग क्या होता है",
+    "en_answer": "The color of real honey is between pale yellow and dark brown.",
+    "hi_answer": "असली शहद का रंग हल्का पीला और गहरा भूरा होता है।",
+    "gold_en": [
+      "en-14e979ceb0f81f36"
+    ],
+    "gold_hi": [
+      "hi-32a93fab5ff7b6cf"
+    ]
+  },
+  {
+    "query_id": 523087,
+    "query_type": "DESCRIPTION",
+    "en_query": "tours of martha's vineyard",
+    "hi_query": "मार्था के अंगूर के बागान का दौरा",
+    "en_answer": "Areas of Edgartown, Oak Bluffs and Vineyard Haven.",
+    "hi_answer": "एडगरटाउन, ओक ब्लफ्स और वाइनयार्ड हेवन के क्षेत्र।",
+    "gold_en": [
+      "en-52b8ea0692213523"
+    ],
+    "gold_hi": [
+      "hi-4123b32f4eb156a4"
+    ]
+  },
+  {
+    "query_id": 457630,
+    "query_type": "ENTITY",
+    "en_query": "most expensive car in the world",
+    "hi_query": "दुनिया की सबसे महंगी कार",
+    "en_answer": "Bugatti Chiron",
+    "hi_answer": "बुगाटी चिरोन",
+    "gold_en": [
+      "en-9f9130f254478d8f"
+    ],
+    "gold_hi": [
+      "hi-18ea558b88499c91"
+    ]
+  },
+  {
+    "query_id": 406546,
+    "query_type": "DESCRIPTION",
+    "en_query": "is clinton foundation closed",
+    "hi_query": "क्लिंटन फाउंडेशन बंद है",
+    "en_answer": "Yes, it will be closed on monday march 3,due to inclement weather.",
+    "hi_answer": "हाँ, खराब मौसम के कारण इसे सोमवार 3 मार्च को बंद कर दिया जाएगा।",
+    "gold_en": [
+      "en-a9b372b250dde439"
+    ],
+    "gold_hi": [
+      "hi-f0cf572263da8ade"
+    ]
+  },
+  {
+    "query_id": 443489,
+    "query_type": "ENTITY",
+    "en_query": "luggage that can withstand airline handling",
+    "hi_query": "सामान जो एयरलाइन हैंडलिंग को सहन कर सकता है",
+    "en_answer": "All baggage must be packed so that it can withstand normal baggage handling and must withstand the impact of coming into contact with other luggage in the baggage system and when loading/unloading the aircraft.",
+    "hi_answer": "सभी सामान को पैक किया जाना चाहिए ताकि यह सामान्य सामान सँभालने का सामना कर सके और सामान प्रणाली में अन्य सामान के संपर्क में आने और विमान को लोड करने/उतारने के दौरान इसके प्रभाव को सहन कर सके।",
+    "gold_en": [
+      "en-ff854cc67230efa9"
+    ],
+    "gold_hi": [
+      "hi-17a97307bb4e236e"
+    ]
+  },
+  {
+    "query_id": 649110,
+    "query_type": "DESCRIPTION",
+    "en_query": "what does tear himself away mean",
+    "hi_query": "आँखों के पानी बहाने का क्या मतलब है",
+    "en_answer": "It mean to separate or pull apart by force.",
+    "hi_answer": "इसका अर्थ है बल प्रयोग करके अलग करना या खींचना।",
+    "gold_en": [
+      "en-e3c985f897da5bd6"
+    ],
+    "gold_hi": [
+      "hi-cef1f21e7dcb2121"
+    ]
+  },
+  {
+    "query_id": 424859,
+    "query_type": "DESCRIPTION",
+    "en_query": "is suboxone a bad drug",
+    "hi_query": "सबॉक्सोन एक खराब दवा है।",
+    "en_answer": "Yes",
+    "hi_answer": "सहमत हैं तो",
+    "gold_en": [
+      "en-ff188683aed298e7"
+    ],
+    "gold_hi": [
+      "hi-525597c2060c9b04"
+    ]
+  },
+  {
+    "query_id": 388219,
+    "query_type": "NUMERIC",
+    "en_query": "how wide apart to place a hammock",
+    "hi_query": "एक झूला को कितना चौड़ा रखना है",
+    "en_answer": "6 feet",
+    "hi_answer": "6 फीट",
+    "gold_en": [
+      "en-25eeda37b028bf12"
+    ],
+    "gold_hi": [
+      "hi-588ec1a44950e64f"
+    ]
+  },
+  {
+    "query_id": 668454,
+    "query_type": "DESCRIPTION",
+    "en_query": "what helps bad memories",
+    "hi_query": "बुरी यादों को क्या मदद करता है",
+    "en_answer": "Allergy medicine, diphenhydramine helps bad memories.",
+    "hi_answer": "एलर्जी की दवा, डाइफेनहाइड्रामाइन बुरी यादों में मदद करती है।",
+    "gold_en": [
+      "en-165412b72514537b"
+    ],
+    "gold_hi": [
+      "hi-285802349be39ea4"
+    ]
+  },
+  {
+    "query_id": 549605,
+    "query_type": "DESCRIPTION",
+    "en_query": "what activities are essential to the ems system?",
+    "hi_query": "एम्स प्रणाली के लिए कौन सी गतिविधियाँ आवश्यक हैं?",
+    "en_answer": "To establish and maintain a program for continuously monitoring and improving the quality of patient care and support services are essential to the ems system.",
+    "hi_answer": "रोगी देखभाल और सहायता सेवाओं की गुणवत्ता पर निरंतर निगरानी और सुधार के लिए एक कार्यक्रम स्थापित करना और बनाए रखना एम्स प्रणाली के लिए आवश्यक है।",
+    "gold_en": [
+      "en-781adad9c4b318f3"
+    ],
+    "gold_hi": [
+      "hi-5c8c8d2fd7c38fa0"
+    ]
+  },
+  {
+    "query_id": 471640,
+    "query_type": "DESCRIPTION",
+    "en_query": "parallel circuit evaluation",
+    "hi_query": "समानांतर सर्किट मूल्यांकन",
+    "en_answer": "Impedance of parallel RLC circuit is Z = R + jX.",
+    "hi_answer": "समांतर आर.एल.सी. सर्किट का प्रतिरोध जेड = आर + जे.एक्स. है।",
+    "gold_en": [
+      "en-e99acb30d89a13c1"
+    ],
+    "gold_hi": [
+      "hi-29eb465d13fbdfb8"
+    ]
+  },
+  {
+    "query_id": 613437,
+    "query_type": "LOCATION",
+    "en_query": "what county is sweetwater tn in?",
+    "hi_query": "कौन सी काउंटी में मीठा पानी है?",
+    "en_answer": "Monroe and McMinn counties",
+    "hi_answer": "मोनरो और मैकमिन काउंटी",
+    "gold_en": [
+      "en-1823b4bc08704e26"
+    ],
+    "gold_hi": [
+      "hi-c40c5069366e9da0"
+    ]
+  },
+  {
+    "query_id": 590634,
+    "query_type": "DESCRIPTION",
+    "en_query": "what causes pancolitis",
+    "hi_query": "अग्नाशयशोथ का कारण क्या है",
+    "en_answer": "Any disease or disorder affecting the normal function of small intestine and large intestine.",
+    "hi_answer": "कोई भी बीमारी या विकार जो छोटी आंत और बड़ी आंत के सामान्य कार्य को प्रभावित करता है।",
+    "gold_en": [
+      "en-6c16a70b96a92e5e"
+    ],
+    "gold_hi": [
+      "hi-2e9de3e0d594204f"
+    ]
+  },
+  {
+    "query_id": 602840,
+    "query_type": "LOCATION",
+    "en_query": "what county is barnett, mo",
+    "hi_query": "कौन सी काउंटी बार्नेट है मो",
+    "en_answer": "Morgan County",
+    "hi_answer": "मॉर्गन काउंटी",
+    "gold_en": [
+      "en-d4c0ba29c85d36f0"
+    ],
+    "gold_hi": [
+      "hi-0ae986f02e610da0"
+    ]
+  },
+  {
+    "query_id": 1094270,
+    "query_type": "DESCRIPTION",
+    "en_query": "is a conduit ira simple or traditional?",
+    "hi_query": "क्या यह एक साधारण या पारंपरिक माध्यम है?",
+    "en_answer": "Conduit IRA is a traditional.",
+    "hi_answer": "कॉन्डीट आई.आर.ए. एक पारंपरिक योजना है।",
+    "gold_en": [
+      "en-aa2a619b825ebcb0"
+    ],
+    "gold_hi": [
+      "hi-b1b7e1630c4ef5c9"
+    ]
+  },
+  {
+    "query_id": 230891,
+    "query_type": "NUMERIC",
+    "en_query": "how far is disney world from universal",
+    "hi_query": "डिज़्नी वर्ल्ड यूनिवर्सल से कितनी दूर है",
+    "en_answer": "Universal is approximately 15 minutes from Disney World.",
+    "hi_answer": "यूनिवर्सल डिज़्नी वर्ल्ड से लगभग 15 मिनट की दूरी पर है।",
+    "gold_en": [
+      "en-87ff5a50cee43c72"
+    ],
+    "gold_hi": [
+      "hi-b0ad481f042226cf"
+    ]
+  },
+  {
+    "query_id": 389741,
+    "query_type": "ENTITY",
+    "en_query": "hydrangea trees types",
+    "hi_query": "हाइड्रेंजिया पेड़ों के प्रकार",
+    "en_answer": "Hydrangea macrophylla (bigleaf, French, garden or florists hydrangea), Hydrangea paniculata (PeeGee, Grandiflora), oakleaf hydrangea (H. quercifolia), Bobo.",
+    "hi_answer": "हाइड्रेंजिया मैक्रोफिला (बिगलीफ, फ्रेंच, गार्डन या फ्लोरिस्ट हाइड्रेंजिया), हाइड्रेंजिया पैनिकुलाटा (पीजी, ग्रैंडिफ्लोरा), ओकलीफ हाइड्रेंजिया (एच. क्वेरसिफोलिया), बोबो।",
+    "gold_en": [
+      "en-5ac3e8590f1344d2",
+      "en-22213ca8fdce28f2",
+      "en-767c2ee908aa8c7b",
+      "en-f427c7b3abf8f3d4"
+    ],
+    "gold_hi": [
+      "hi-97a013da6f5e12cc",
+      "hi-ca8e4273355b8d99",
+      "hi-9f59af3dd21e5a12",
+      "hi-2b4e02aaebb305d7"
+    ]
+  },
+  {
+    "query_id": 1093643,
+    "query_type": "DESCRIPTION",
+    "en_query": "bashert meaning",
+    "hi_query": "बशेर्त का अर्थ है",
+    "en_answer": "Bashert means destiny and it is usually used in the context of one's divinely foreordained spouse or soulmate.",
+    "hi_answer": "बशेर्त का अर्थ है नियति और इसका उपयोग आम तौर पर किसी के दैवीय रूप से निर्धारित जीवनसाथी या आत्मा के संदर्भ में किया जाता है।",
+    "gold_en": [
+      "en-7a525c273c79a484"
+    ],
+    "gold_hi": [
+      "hi-89bc4882499f3784"
+    ]
+  },
+  {
+    "query_id": 824371,
+    "query_type": "ENTITY",
+    "en_query": "what is the hawaiian word for dog",
+    "hi_query": "कुत्ते के लिए हवाई शब्द क्या है",
+    "en_answer": "ʻīlio",
+    "hi_answer": "ʼIlioʼ",
+    "gold_en": [
+      "en-840c3339d15d511f"
+    ],
+    "gold_hi": [
+      "hi-d604463936a5981f"
+    ]
+  },
+  {
+    "query_id": 1082776,
+    "query_type": "DESCRIPTION",
+    "en_query": "what does the l-ramp stand for?",
+    "hi_query": "एल-रैंप का क्या अर्थ है?",
+    "en_answer": "LRAMP stands for Long Range Army Material Plan.",
+    "hi_answer": "एल.आर.ए.एम.पी. का अर्थ है लॉन्ग रेंज आर्मी मटीरियल प्लान।",
+    "gold_en": [
+      "en-f5530d1330f2f430"
+    ],
+    "gold_hi": [
+      "hi-996fd19dcca1dbb4"
+    ]
+  },
+  {
+    "query_id": 1082495,
+    "query_type": "DESCRIPTION",
+    "en_query": "what does tian mean",
+    "hi_query": "टियान का क्या अर्थ है",
+    "en_answer": "A tian is a shallow French earthenware baking dish as well as the name of the roasted vegetable dish often made in it and baked in an oven.",
+    "hi_answer": "टियन एक उथला फ्रेंच मिट्टी का बेकिंग वेयर है जिस में अक्सर भुनी हुई सब्जी के व्यंजन को डालकर ओवन में बेक किया जाता है।",
+    "gold_en": [
+      "en-55fa6d5505abb99c"
+    ],
+    "gold_hi": [
+      "hi-8f8469b25a9e3c97"
+    ]
+  },
+  {
+    "query_id": 1042726,
+    "query_type": "PERSON",
+    "en_query": "who is vishnu and shiva",
+    "hi_query": "विष्णु और शिव कौन हैं",
+    "en_answer": "Lord Shiva is the destroyer of the world and lord vishnu is the preserver.",
+    "hi_answer": "भगवान शिव दुनिया के विनाशक हैं और भगवान विष्णु संरक्षक हैं।",
+    "gold_en": [
+      "en-643466e98c555618"
+    ],
+    "gold_hi": [
+      "hi-55778c8bb439c70d"
+    ]
+  },
+  {
+    "query_id": 883024,
+    "query_type": "DESCRIPTION",
+    "en_query": "what operating system do i have on my ipad",
+    "hi_query": "मेरे आईपैड पर कौन सा ऑपरेटिंग सिस्टम है",
+    "en_answer": "iOS",
+    "hi_answer": "सूचना प्राप्त करने के लिए आई.ओ.एस.",
+    "gold_en": [
+      "en-5d7da39d65685cb3"
+    ],
+    "gold_hi": [
+      "hi-0f01fe213aca5cae"
+    ]
+  },
+  {
+    "query_id": 114853,
+    "query_type": "ENTITY",
+    "en_query": "cyst on vaginal lip home remedies",
+    "hi_query": "योनि ओठ पर पुटी घरेलू उपचार",
+    "en_answer": "By applying apple cider vinegar directly to the affected area daily for several days in a row.",
+    "hi_answer": "सेब के सिरके को लगातार कई दिनों तक प्रतिदिन प्रभावित क्षेत्र पर सीधे लगाते रहने से कामयाबी मिल सकती है।",
+    "gold_en": [
+      "en-1fc333952b472705"
+    ],
+    "gold_hi": [
+      "hi-1573c43a479dfec4"
+    ]
+  },
+  {
+    "query_id": 1091930,
+    "query_type": "DESCRIPTION",
+    "en_query": "other words meaning resolve",
+    "hi_query": "अन्य शब्द जिनका अर्थ है संकल्प",
+    "en_answer": "Words Related to resolve are break down, decompose, disassemble, disintegrate, dissolve.",
+    "hi_answer": "समस्या से संबंधित शब्दों को तोड़ें, विघटित करें, विघटित करें, विघटित करें, घोलें।",
+    "gold_en": [
+      "en-331b5f5c4c87a5b7"
+    ],
+    "gold_hi": [
+      "hi-19ccca66fcf0202b"
+    ]
+  },
+  {
+    "query_id": 1091724,
+    "query_type": "DESCRIPTION",
+    "en_query": "petal function",
+    "hi_query": "पंखुड़ी कार्य",
+    "en_answer": "The function of flower petals is to help pollinate the plant so it may propagate.",
+    "hi_answer": "फूलों की पंखुड़ियों का कार्य पौधे को परागित करने में मदद करना है ताकि यह प्रसार कर सके।",
+    "gold_en": [
+      "en-8251cae7457faabc"
+    ],
+    "gold_hi": [
+      "hi-9ecb5578be523cfc"
+    ]
+  },
+  {
+    "query_id": 983546,
+    "query_type": "LOCATION",
+    "en_query": "where is goodridge mn",
+    "hi_query": "गुडरिज मिन",
+    "en_answer": "In Pennington County, Minnesota, United States.",
+    "hi_answer": "पेनिंगटन काउंटी, मिनेसोटा, संयुक्त राज्य अमेरिका में",
+    "gold_en": [
+      "en-13b801cbea611e5c"
+    ],
+    "gold_hi": [
+      "hi-07ebe9b93958f3b5"
+    ]
+  },
+  {
+    "query_id": 1091175,
+    "query_type": "DESCRIPTION",
+    "en_query": "quizlet distinguish how fermentation and respiration different",
+    "hi_query": "क्विज़लेट अलग करता है कि कैसे किण्वन और श्वसन अलग-अलग हैं।",
+    "en_answer": "1 Fermentation is present in both aerobic and anaerobic respiration, but not anaerobic respiration. 2 Fermentation is used as a commercialized process but not the anaerobic respiration. 3 Alcohol and lactic acid are main waste products of fermentation but not always in anaerobic respiration. 4 Fermentation is a process where energy is produced from organic compounds using endogenous electron acceptors, and there are many types of electron acceptors. However, anaerobic respiration uses either endogenous or exogenous non-oxygen compounds as terminal electron acceptors in the process.",
+    "hi_answer": "1. किण्वन एरोबिक और अवायवीय श्वसन दोनों में मौजूद है, लेकिन अवायवीय श्वसन में नहीं। 2. किण्वन का उपयोग वाणिज्यिक प्रक्रिया के रूप में किया जाता है, लेकिन अवायवीय श्वसन में नहीं। 3. अल्कोहल और लैक्टिक एसिड किण्वन के मुख्य अपशिष्ट उत्पाद हैं, लेकिन हमेशा अवायवीय श्वसन में नहीं। 4. किण्वन एक ऐसी प्रक्रिया है जिसमें ऊर्जा को अंतर्जात इलेक्ट्रॉन स्वीकारकों का उपयोग करके जैविक यौगिकों से उत्पन्न किया जाता है, और इलेक्ट्रॉन स्वीकारकों के कई प्रकार होते हैं। हालांकि, अवायवीय श्वसन में या तो अंतर्जात या बाह्य गैर-ऑक्सीजन यौगिकों को टर्मिनल इलेक्ट्रॉन स्वीकारकों के रूप में उपयोग किया जाता है।",
+    "gold_en": [
+      "en-fcfa6499885746bb",
+      "en-a3a3b4515b3d22ef"
+    ],
+    "gold_hi": [
+      "hi-d26964664f8ecd91",
+      "hi-91d9e31425def4b6"
+    ]
+  },
+  {
+    "query_id": 938496,
+    "query_type": "NUMERIC",
+    "en_query": "when did flava in ya ear come out",
+    "hi_query": "कान में फ्लेवा कब निकला",
+    "en_answer": "1994",
+    "hi_answer": "1994",
+    "gold_en": [
+      "en-4ed9fdf76d9b5204"
+    ],
+    "gold_hi": [
+      "hi-7521684a84628abe"
+    ]
+  },
+  {
+    "query_id": 809571,
+    "query_type": "PERSON",
+    "en_query": "what is the boys name in soul silver",
+    "hi_query": "सोल सिल्वर में लड़कों का नाम क्या है",
+    "en_answer": "Ethan",
+    "hi_answer": "ईथन",
+    "gold_en": [
+      "en-ddb744ad7c7b4285"
+    ],
+    "gold_hi": [
+      "hi-a5530d5d864aabe2"
+    ]
+  }
+]

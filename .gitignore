@@ -1,0 +1,17 @@
+.venv/
+frontend/node_modules/
+frontend/dist/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.env
+data/raw/
+*.parquet
+.ipynb_checkpoints/
+.DS_Store
+dist/
+build/
+*.log

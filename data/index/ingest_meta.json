@@ -1,0 +1,36 @@
+{
+  "parquet": "/media/omchillure/Hackathon/rag/data/raw/hinval.parquet",
+  "examples": 400,
+  "corpus": {
+    "unique_passages": 7965,
+    "note": "recovered after ingest metadata write; index files complete"
+  },
+  "chunks": 70871,
+  "strategies": {
+    "passage": 7965,
+    "sentence_window": 20751,
+    "recursive": 8310,
+    "semantic": 7666,
+    "proposition": 13934,
+    "hierarchical_child": 12245
+  },
+  "holdout": 44,
+  "retriever": {
+    "chunks": 70871,
+    "parents": 7965,
+    "languages": {
+      "en": 56232,
+      "hi": 14639
+    },
+    "strategies": {
+      "passage": 7965,
+      "sentence_window": 20751,
+      "recursive": 8310,
+      "semantic": 7666,
+      "proposition": 13934,
+      "hierarchical_child": 12245
+    },
+    "neural": false,
+    "lsa_dim": 192
+  }
+}
