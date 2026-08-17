@@ -6,16 +6,16 @@ Not a raw prompt-in / text-out call. Every turn is a tool graph with:
 - a recorded trace
 - first-class refusal
 
-Fast path (default, SLA): compiled DAG, no LLM.
-Quality path: Gemini (free) or SpaceXAI composer on the same retrieve/ground tools.
+Fast path: compiled DAG, extractive reader, no LLM.
 """
 
 from __future__ import annotations
 
+from collections import OrderedDict
 from typing import Any, Callable, Literal
 
+from voice_rag.config import settings
 from voice_rag.generation.extractive import extract
-from voice_rag.generation.composer import compose as llm_compose
 from voice_rag.guardrails.policy import (
     check_grounding,
     check_input,
@@ -28,7 +28,7 @@ from voice_rag.textutil import detect_language, infer_query_type
 from voice_rag.types import Answer, GuardDecision, Hit, PipelineResult
 
 
-Mode = Literal["fast", "quality"]
+Mode = Literal["fast"]
 
 
 class ToolError(Exception):
@@ -47,11 +47,18 @@ class Harness:
             "retrieve": self.tool_retrieve,
             "extract_answer": self.tool_extract,
             "ground_check": self.tool_ground,
-            "compose_answer": self.tool_compose,
             "refuse": self.tool_refuse,
         }
+        self._cache: OrderedDict[str, PipelineResult] = OrderedDict()
+        self._cache_max = max(0, int(getattr(settings, "query_cache_size", 256) or 0))
 
     def run(self, query: str, mode: Mode = "fast") -> PipelineResult:
+        cache_key = (query or "").strip()
+        if self._cache_max and cache_key and cache_key in self._cache:
+            hit = self._cache.pop(cache_key)
+            self._cache[cache_key] = hit
+            return hit.model_copy(deep=False)
+
         clock = Stopwatch()
         trace: list[dict[str, Any]] = []
         guards: list[GuardDecision] = []
@@ -118,20 +125,6 @@ class Harness:
         ground = call("ground_check", answer=extracted["text"], hits=hits)
         guards.append(ground)
 
-        if mode == "quality":
-            composed = call("compose_answer", query=query, hits=hits)
-            if composed and composed.get("answer"):
-                g2 = call("ground_check", answer=composed["answer"], hits=hits)
-                guards.append(g2)
-                if g2.allowed:
-                    extracted = {
-                        "text": composed["answer"],
-                        "spans": extracted.get("spans") or [],
-                        "confidence": max(extracted.get("confidence", 0.0), 0.7),
-                        "mode": composed.get("_provider") or "llm",
-                    }
-                    ground = g2
-
         if not ground.allowed:
             # recovery: try the next extractive span if any
             if extracted.get("alts"):
@@ -175,7 +168,7 @@ class Harness:
             lang = meta.get("language", "en")
             qtype = meta.get("query_type", "UNKNOWN")
         total = clock.total_ms
-        return PipelineResult(
+        result = PipelineResult(
             query=query,
             detected_language=lang,
             query_type=qtype,
@@ -187,6 +180,12 @@ class Harness:
             sla_ok=total < 200.0,
             harness_trace=trace,
         )
+        cache_key = (query or "").strip()
+        if self._cache_max and cache_key:
+            self._cache[cache_key] = result
+            while len(self._cache) > self._cache_max:
+                self._cache.popitem(last=False)
+        return result
 
     # ----- tools -----
     def tool_safety_check(self, query: str) -> GuardDecision:
@@ -211,9 +210,6 @@ class Harness:
 
     def tool_ground(self, answer: str, hits: list[Hit]) -> GuardDecision:
         return check_grounding(answer, hits)
-
-    def tool_compose(self, query: str, hits: list[Hit]) -> dict[str, Any] | None:
-        return llm_compose(query, hits)
 
     def tool_refuse(self, reason: str) -> Answer:
         return Answer(

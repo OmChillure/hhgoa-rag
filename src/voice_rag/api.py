@@ -5,18 +5,17 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, ORJSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from voice_rag.config import ROOT, settings
-from voice_rag.generation.composer import active_provider
 from voice_rag.latency.metrics import summarize
 from voice_rag.pipeline import VoiceRAG
 from voice_rag.stt.sarvam import SarvamError, transcribe
-from voice_rag.types import PipelineResult
+from voice_rag.types import PipelineResult, StageTiming
 
 rag = VoiceRAG()
 _live_latencies: list[float] = []
@@ -24,8 +23,9 @@ _live_latencies: list[float] = []
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    if (settings.index_dir / "READY").exists():
-        rag.load(settings.index_dir)
+    idx = settings.index_dir
+    if (idx / "encoder.meta.json").exists() or (idx / "READY").exists():
+        rag.load(idx)
     yield
 
 
@@ -40,7 +40,16 @@ app.add_middleware(
 
 class AskBody(BaseModel):
     query: str = Field(min_length=1, max_length=2000)
-    mode: str = "fast"
+    stt_ms: float | None = None
+
+
+def _attach_stt(result: PipelineResult, stt_ms: float | None) -> PipelineResult:
+    if stt_ms is None or stt_ms < 0:
+        return result
+    result.stt_ms = float(stt_ms)
+    if not any(t.name == "stt" for t in result.timings):
+        result.timings = [StageTiming(name="stt", ms=result.stt_ms), *result.timings]
+    return result
 
 
 def _serialize(result: PipelineResult) -> dict[str, Any]:
@@ -59,8 +68,6 @@ def health() -> dict[str, Any]:
         "ready": ready,
         "sarvam": bool(settings.sarvam_key_list()),
         "sarvam_keys": len(settings.sarvam_key_list()),
-        "gemini": bool(settings.gemini_api_key),
-        "composer": active_provider(),
         "stats": stats,
         "sla_ms": settings.sla_ms,
     }
@@ -70,9 +77,7 @@ def health() -> dict[str, Any]:
 def ask(body: AskBody) -> dict[str, Any]:
     if rag.harness is None:
         raise HTTPException(503, "Index not built. Run: python scripts/ingest.py")
-    if body.mode not in {"fast", "quality"}:
-        raise HTTPException(400, "mode must be fast or quality")
-    return _serialize(rag.ask(body.query, mode=body.mode))  # type: ignore[arg-type]
+    return _serialize(_attach_stt(rag.ask(body.query), body.stt_ms))
 
 
 @app.post("/api/transcribe")
@@ -92,19 +97,15 @@ async def transcribe_only(file: UploadFile = File(...)) -> dict[str, Any]:
 @app.post("/api/ask-audio")
 async def ask_audio(
     file: UploadFile = File(...),
-    mode: str = Form("fast"),
 ) -> dict[str, Any]:
     if rag.harness is None:
         raise HTTPException(503, "Index not built. Run: python scripts/ingest.py")
-    if mode not in {"fast", "quality"}:
-        raise HTTPException(400, "mode must be fast or quality")
     audio = await file.read()
     try:
         result = rag.ask_audio(
             audio,
             filename=file.filename or "audio.webm",
             content_type=file.content_type or "audio/webm",
-            mode=mode,  # type: ignore[arg-type]
         )
     except SarvamError as exc:
         raise HTTPException(400, str(exc)) from exc

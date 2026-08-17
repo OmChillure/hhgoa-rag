@@ -8,10 +8,11 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 .env
-data/raw/
+vaani_index
 *.parquet
 .ipynb_checkpoints/
 .DS_Store
 dist/
 build/
 *.log
+notebooks/

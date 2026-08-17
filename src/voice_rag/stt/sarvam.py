@@ -71,9 +71,8 @@ def transcribe(audio: bytes, filename: str = "audio.webm", content_type: str = "
     if not audio:
         raise SarvamError("empty audio")
 
-    audio, filename, content_type = to_wav(audio, filename, content_type)
-
     t0 = time.perf_counter()
+    audio, filename, content_type = to_wav(audio, filename, content_type)
     last_err: Exception | None = None
     tried: list[int] = []
 

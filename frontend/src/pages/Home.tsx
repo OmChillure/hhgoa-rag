@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Composer } from '../components/Composer'
 import { askText, fetchHealth, fetchSamples } from '../api'
-import type { Health, Mode, Sample } from '../types'
+import type { Health, Sample } from '../types'
 import { saveResult } from '../session'
 
 export function Home() {
   const nav = useNavigate()
   const [q, setQ] = useState('')
-  const [mode, setMode] = useState<Mode>('fast')
+  const [sttMs, setSttMs] = useState<number | null>(null)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   const [health, setHealth] = useState<Health | null>(null)
@@ -25,8 +25,9 @@ export function Home() {
     setBusy(true)
     setErr('')
     try {
-      const result = await askText(text, mode)
+      const result = await askText(text, sttMs)
       saveResult(result)
+      setSttMs(null)
       nav('/result')
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'failed')
@@ -52,8 +53,7 @@ export function Home() {
           <Composer
             value={q}
             onChange={setQ}
-            mode={mode}
-            onMode={setMode}
+            onStt={setSttMs}
             onSubmit={() => runText(q)}
             busy={busy}
             canVoice={health?.sarvam}

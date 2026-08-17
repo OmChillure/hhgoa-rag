@@ -1,12 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { transcribeAudio } from '../api'
-import type { Mode } from '../types'
 
 type Props = {
   value: string
   onChange: (v: string) => void
-  mode: Mode
-  onMode: (m: Mode) => void
+  onStt?: (ms: number | null) => void
   onSubmit: () => void
   busy?: boolean
   dock?: boolean
@@ -16,8 +14,7 @@ type Props = {
 export function Composer({
   value,
   onChange,
-  mode,
-  onMode,
+  onStt,
   onSubmit,
   busy,
   dock,
@@ -37,8 +34,11 @@ export function Composer({
   async function finishClip(blob: Blob) {
     setMic('stt')
     try {
-      const { text } = await transcribeAudio(blob)
-      if (text) onChange(text)
+      const { text, ms } = await transcribeAudio(blob)
+      if (text) {
+        onChange(text)
+        onStt?.(ms)
+      }
     } catch (err) {
       alert(err instanceof Error ? err.message : 'transcribe failed')
     } finally {
@@ -73,15 +73,6 @@ export function Composer({
 
   const actions = (
     <div className="actions">
-      <select
-        className="mode-select"
-        value={mode}
-        onChange={(e) => onMode(e.target.value as Mode)}
-        aria-label="answer mode"
-      >
-        <option value="fast">Fast</option>
-        <option value="quality">Gemini</option>
-      </select>
       <button
         type="button"
         className={`icon-btn${mic === 'rec' ? ' rec' : ''}${mic === 'stt' ? ' wait' : ''}`}
@@ -128,7 +119,10 @@ export function Composer({
           className="inline-input"
           placeholder="Ask the corpus…"
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) => {
+            onChange(e.target.value)
+            onStt?.(null)
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && value.trim() && !busy) onSubmit()
           }}
@@ -145,7 +139,10 @@ export function Composer({
         rows={2}
         placeholder="Ask me anything"
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => {
+          onChange(e.target.value)
+          onStt?.(null)
+        }}
         onKeyDown={(e) => {
           if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault()

@@ -6,7 +6,7 @@ from voice_rag.config import settings
 from voice_rag.harness.orchestrator import Harness, Mode
 from voice_rag.retrieval.hybrid import HybridRetriever
 from voice_rag.stt.sarvam import transcribe
-from voice_rag.types import PipelineResult
+from voice_rag.types import PipelineResult, StageTiming
 
 
 class VoiceRAG:
@@ -35,6 +35,8 @@ class VoiceRAG:
         result = self.ask(tr.text, mode=mode)
         result.transcript = tr.text
         result.stt_ms = tr.ms
+        if not any(t.name == "stt" for t in result.timings):
+            result.timings = [StageTiming(name="stt", ms=tr.ms), *result.timings]
         if tr.language_code:
             result.detected_language = tr.language_code
         return result

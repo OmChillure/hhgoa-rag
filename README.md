@@ -28,7 +28,7 @@ cd frontend && npm run build
 PYTHONPATH=src python scripts/serve.py
 ```
 
-Typed questions work with no keys. Mic needs Sarvam. **Quality** mode needs Gemini.
+Typed questions work with no keys. Mic needs Sarvam. Answers are extractive (no LLM).
 
 ## One-time index (already built)
 

@@ -1,4 +1,4 @@
-export type Mode = 'fast' | 'quality'
+export type Mode = 'fast'
 
 export type Hit = {
   score: number
@@ -48,7 +48,6 @@ export type Health = {
   ready: boolean
   sarvam: boolean
   sarvam_keys: number
-  gemini: boolean
   sla_ms: number
   stats: { chunks?: number }
 }
@@ -59,11 +58,17 @@ export type BenchLatency = {
   n: number
   p50_ms: number
   p70_ms: number
+  p90_ms?: number
   p100_ms: number
+  mean_ms?: number
   under_200ms_pct: number
 }
 
 export type Metrics = {
   live: BenchLatency
-  bench: { latency?: BenchLatency }
+  bench: {
+    n_queries?: number
+    latency?: BenchLatency
+    stages?: Record<string, BenchLatency>
+  }
 }

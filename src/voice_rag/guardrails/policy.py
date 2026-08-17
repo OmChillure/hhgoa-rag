@@ -11,14 +11,44 @@ from voice_rag.config import settings
 from voice_rag.textutil import coverage, token_set, tokenize
 from voice_rag.types import GuardDecision, Hit
 
+_SUPPORT_META = frozenset(
+    "meaning definition define explain describe please tell".split()
+)
+
 
 _UNSAFE = [
-    (r"\b(how to make|build|synthesize)\b.*\b(bomb|explosive|napalm|ricin|fentanyl|sarin)\b", "weapons"),
-    (r"\b(kill|murder|assassinate|poison)\b.*\b(someone|him|her|people|kids)\b", "violence"),
-    (r"\b(suicide|self[- ]harm|kill myself)\b", "self_harm"),
-    (r"\b(child porn|csam|underage sex|sexual(?:ly)? (?:explicit )?(?:content )?of (?:a )?minor)\b", "csea"),
-    (r"\b(credit card|ssn|social security|cvv)\b.*\b(dump|steal|generate)\b", "crime"),
-    (r"\b(ignore (?:all )?(?:previous|prior) (?:instructions|rules)|jailbreak|dan mode)\b", "jailbreak"),
+    (
+        r"(how\s+to\s+(make|build|create|cook|assemble)|instructions?\s+for\s+(making|building)|"
+        r"recipe\s+for|synthesize|manufacture)\b.{0,40}\b"
+        r"(bomb|explosive|ied|napalm|ricin|fentanyl|sarin|pipe\s*bomb|molotov)",
+        "weapons",
+    ),
+    (r"(बम|विस्फोटक).{0,20}(कैसे|बना|बनाना)|(कैसे|बनाना).{0,20}(बम|विस्फोटक)", "weapons"),
+    (
+        r"\b(kill|murder|assassinate|poison|shoot|stab)\b.{0,30}\b"
+        r"(someone|somebody|him|her|them|people|kids|children|a person)\b",
+        "violence",
+    ),
+    (r"(हत्या|मार डाल|मार दूं|मार दूँ).{0,16}(कैसे|किसी)", "violence"),
+    (
+        r"\b(suicide|self[- ]harm|kill myself|end my life|cut myself|how to die)\b",
+        "self_harm",
+    ),
+    (r"(आत्महत्या|खुदकुशी|खुद को मार)", "self_harm"),
+    (
+        r"\b(child\s*porn|csam|underage\s+sex|child\s+sex|sexual(?:ly)?\s+(?:explicit\s+)?"
+        r"(?:content\s+)?of\s+(?:a\s+)?minor|loli|shota)\b",
+        "csea",
+    ),
+    (
+        r"\b(credit\s*card|ssn|social\s+security|cvv|otp)\b.{0,24}\b(dump|steal|generate|hack)\b",
+        "crime",
+    ),
+    (
+        r"\b(ignore (?:all )?(?:previous|prior) (?:instructions|rules)|jailbreak|dan mode|"
+        r"developer\s+mode|bypass\s+(?:your\s+)?(?:filters|guardrails))\b",
+        "jailbreak",
+    ),
 ]
 
 _OFF_TOPIC = [
@@ -76,7 +106,7 @@ def check_retrieval(hits: list[Hit], query: str = "") -> GuardDecision:
             categories=["unanswerable"],
         )
     best = hits[0].score
-    qset = token_set(query)
+    qset = {t for t in token_set(query) if t not in _SUPPORT_META}
     ctx = token_set(" ".join((h.parent_text or h.chunk.text) for h in hits[:4]))
     support = (len(qset & ctx) / len(qset)) if qset else 0.0
     if best < settings.min_retrieval_score or support < 0.55:

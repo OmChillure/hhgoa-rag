@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     port: int = Field(default=8080, alias="VAANI_PORT")
 
     raw_dir: Path = Field(default=ROOT / "data" / "raw", alias="VAANI_RAW_DIR")
-    index_dir: Path = Field(default=ROOT / "data" / "index", alias="VAANI_INDEX_DIR")
+    index_dir: Path = Field(default=ROOT / "vaani_index", alias="VAANI_INDEX_DIR")
     reports_dir: Path = Field(default=ROOT / "data" / "reports", alias="VAANI_REPORTS_DIR")
 
     # Ingest
@@ -33,11 +33,15 @@ class Settings(BaseSettings):
     tfidf_features: int = 12000
 
     # Retrieval
-    dense_top_k: int = 24
-    sparse_top_k: int = 24
+    dense_top_k: int = 16
+    sparse_top_k: int = 16
     fused_top_k: int = 8
+    rerank_pool: int = 16
+    faiss_nprobe: int = 8
+    faiss_threads: int = 1
     parent_expand: int = 6
     min_retrieval_score: float = 0.012
+    query_cache_size: int = 256
 
     # SLA
     sla_ms: float = 200.0
@@ -51,11 +55,6 @@ class Settings(BaseSettings):
     sarvam_api_keys: str = Field(default="", alias="SARVAM_API_KEYS")
     sarvam_model: str = "saaras:v3"
     sarvam_mode: str = "transcribe"
-
-    # Gemini (quality path, AI Studio free tier)
-    gemini_api_key: str = Field(default="", alias="GEMINI_API_KEY")
-    gemini_model: str = Field(default="gemini-2.5-flash-lite", alias="VAANI_GEMINI_MODEL")
-    gemini_timeout_s: float = 12.0
 
     # Guardrails
     grounding_min_coverage: float = 0.55

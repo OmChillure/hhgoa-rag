@@ -1,4 +1,4 @@
-import type { AskResult, Health, Metrics, Mode, Sample } from './types'
+import type { AskResult, Health, Metrics, Sample } from './types'
 
 export async function fetchHealth(): Promise<Health> {
   const r = await fetch('/api/health')
@@ -19,11 +19,14 @@ export async function fetchSamples(): Promise<Sample[]> {
   return data.queries ?? []
 }
 
-export async function askText(query: string, mode: Mode): Promise<AskResult> {
+export async function askText(query: string, sttMs?: number | null): Promise<AskResult> {
   const r = await fetch('/api/ask', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query, mode }),
+    body: JSON.stringify({
+      query,
+      ...(sttMs != null && sttMs > 0 ? { stt_ms: sttMs } : {}),
+    }),
   })
   const data = await r.json()
   if (!r.ok) throw new Error(data.detail || 'ask failed')
@@ -79,11 +82,13 @@ export async function blobToWav(blob: Blob): Promise<Blob> {
 }
 
 export async function transcribeAudio(blob: Blob): Promise<{ text: string; ms: number }> {
+  const t0 = performance.now()
   const wav = await blobToWav(blob)
   const fd = new FormData()
   fd.append('file', wav, 'clip.wav')
   const r = await fetch('/api/transcribe', { method: 'POST', body: fd })
   const data = await r.json()
   if (!r.ok) throw new Error(data.detail || 'transcribe failed')
-  return { text: data.text || '', ms: data.ms ?? 0 }
+  const wall = performance.now() - t0
+  return { text: data.text || '', ms: wall }
 }
