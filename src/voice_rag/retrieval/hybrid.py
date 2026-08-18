@@ -3,7 +3,8 @@ from __future__ import annotations
 import json
 import re
 import sqlite3
-from collections import defaultdict
+import threading
+from collections import OrderedDict, defaultdict
 from pathlib import Path
 from typing import Any
 
@@ -122,7 +123,11 @@ class HybridRetriever:
         # latency budget.
         self.bm25_shards: dict[str, tuple[Any, list[str]]] = {}
         self.st_model = None
+        self._encoder_name = "none"
         self._db: sqlite3.Connection | None = None
+        self._qvec: OrderedDict[str, Any] = OrderedDict()
+        self._qvec_max = 512
+        self._qvec_lock = threading.Lock()
 
     def load(self, directory: Path) -> None:
         db_path = directory / "passages.db"
@@ -141,7 +146,31 @@ class HybridRetriever:
         meta = json.loads((directory / "encoder.meta.json").read_text(encoding="utf-8"))
         from sentence_transformers import SentenceTransformer
 
-        self.st_model = SentenceTransformer(meta["model"])
+        model_name = meta["model"]
+        # Same MiniLM weights as the FAISS index, graph-optimized ONNX.
+        # O3 matches torch embeddings (cos=1.0) and is ~2x faster on CPU.
+        try:
+            import onnxruntime as ort
+
+            so = ort.SessionOptions()
+            so.intra_op_num_threads = 1
+            so.inter_op_num_threads = 1
+            self.st_model = SentenceTransformer(
+                model_name,
+                device="cpu",
+                backend="onnx",
+                model_kwargs={
+                    "file_name": "onnx/model_O3.onnx",
+                    "session_options": so,
+                },
+            )
+            self._encoder_name = "onnx"
+            print("encoder: onnx O3", flush=True)
+        except Exception as exc:
+            print(f"onnx encoder unavailable ({exc}); using torch", flush=True)
+            self.st_model = SentenceTransformer(model_name, device="cpu")
+            self._encoder_name = "st"
+        self.st_model.max_seq_length = 64
         nprobe = int(getattr(settings, "faiss_nprobe", None) or meta.get("nprobe") or 8)
         self.lsa_index = FaissIndex.load(
             directory / "lsa",
@@ -166,6 +195,7 @@ class HybridRetriever:
             self.bm25_shards[lang] = (shard_bm25, shard_ids)
         print(f"bm25 shards: {sorted(self.bm25_shards)}", flush=True)
         self._warmup_bm25()
+        self._encode_query("what is the capital of india")
 
     def stats(self) -> dict:
         n = int(self._db.execute("SELECT COUNT(*) FROM passages").fetchone()[0])
@@ -173,7 +203,7 @@ class HybridRetriever:
             "chunks": n,
             "parents": n,
             "lsa_dim": self.lsa_index.dim if self.lsa_index else 0,
-            "encoder": "st" if self.st_model is not None else "lsa",
+            "encoder": self._encoder_name,
             "sqlite": True,
         }
 
@@ -215,6 +245,8 @@ class HybridRetriever:
 
         # One shard only. Extra sibling shards (hi→mr/sa/ne/en) were the
         # 100ms+ tail; numba BM25 on the right shard is ~1-5ms.
+        # Do NOT encode in parallel with BM25: ONNX MiniLM saturates the
+        # CPU and Indic shards (pa/ml/…) jump from ~5ms to ~90ms.
         primary = self._shard_langs(language, expand=False)
         take(self._bm25_from(query, settings.sparse_top_k, primary), "bm25")
 
@@ -440,12 +472,32 @@ class HybridRetriever:
             if int(idx) >= 0
         ]
 
-    def _dense(self, query: str, k: int) -> list[tuple[str, float]]:
-        if self.lsa_index is None or self.st_model is None:
-            return []
+    def _encode_query(self, query: str):
+        """MiniLM vector for `query`, LRU-cached. Same space as the FAISS index."""
+        key = (query or "").strip()
+        if not key or self.st_model is None:
+            return None
+        with self._qvec_lock:
+            hit = self._qvec.get(key)
+            if hit is not None:
+                self._qvec.move_to_end(key)
+                return hit
         vec = self.st_model.encode(
-            [query],
+            [key],
             normalize_embeddings=True,
             show_progress_bar=False,
-        )
-        return self.lsa_index.search(vec[0], k)
+        )[0]
+        with self._qvec_lock:
+            self._qvec[key] = vec
+            while len(self._qvec) > self._qvec_max:
+                self._qvec.popitem(last=False)
+        return vec
+
+    def _dense(self, query: str, k: int, vec: Any = None) -> list[tuple[str, float]]:
+        if self.lsa_index is None:
+            return []
+        if vec is None:
+            vec = self._encode_query(query)
+        if vec is None:
+            return []
+        return self.lsa_index.search(vec, k)

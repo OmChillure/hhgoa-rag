@@ -1,4 +1,4 @@
-"""Vaani benchmark suite.
+"""Echo benchmark suite.
 
   Benchmark 1  Pure vector retrieval (FAISS search only)
   Benchmark 2  Full end-to-end RAG (retrieval + answer generation)

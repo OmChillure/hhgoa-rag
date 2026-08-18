@@ -29,7 +29,7 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="Vaani", version="0.1.0", lifespan=lifespan, default_response_class=ORJSONResponse)
+app = FastAPI(title="Echo", version="0.1.0", lifespan=lifespan, default_response_class=ORJSONResponse)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

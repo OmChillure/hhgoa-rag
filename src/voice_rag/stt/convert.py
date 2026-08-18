@@ -12,7 +12,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-log = logging.getLogger("vaani.stt")
+log = logging.getLogger("echo.stt")
 
 ACCEPTED_SUFFIX = {".wav", ".mp3", ".mpeg", ".aac", ".aiff", ".aif", ".flac", ".ogg", ".opus"}
 ACCEPTED_TYPES = {
@@ -58,7 +58,7 @@ def to_wav(data: bytes, filename: str = "", content_type: str = "") -> tuple[byt
         return data, filename or "audio.bin", content_type or "application/octet-stream"
 
     suffix = Path(filename or "clip.webm").suffix or ".webm"
-    with tempfile.TemporaryDirectory(prefix="vaani-stt-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="echo-stt-") as tmp:
         src = Path(tmp) / f"in{suffix}"
         dst = Path(tmp) / "out.wav"
         src.write_bytes(data)

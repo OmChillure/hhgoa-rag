@@ -1,4 +1,4 @@
-# Vaani
+# Echo
 
 Voice RAG over a slice of [MSMARCO-XI](https://huggingface.co/datasets/ai4bharat/MSMARCO-XI).
 

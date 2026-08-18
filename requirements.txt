@@ -8,3 +8,4 @@ numpy>=2.0
 faiss-cpu>=1.8
 orjson>=3.10
 sentence-transformers>=3.0
+optimum[onnxruntime]>=1.24

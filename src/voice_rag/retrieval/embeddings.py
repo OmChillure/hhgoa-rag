@@ -8,7 +8,7 @@ from sklearn.decomposition import TruncatedSVD
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.preprocessing import normalize as sk_normalize
 
-log = logging.getLogger("vaani.embed")
+log = logging.getLogger("echo.embed")
 
 
 class LSAEncoder:

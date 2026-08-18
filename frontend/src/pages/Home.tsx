@@ -47,7 +47,7 @@ export function Home() {
       <section className="home">
         <div className="stage">
           <span className="badge">hh_goa</span>
-          <h1 className="word">Vaani</h1>
+          <h1 className="word">Echo</h1>
           <p className="tag">Goa, India · 28 – 31 Oct · voice rag</p>
           <Composer
             value={q}

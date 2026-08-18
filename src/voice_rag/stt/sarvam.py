@@ -16,7 +16,7 @@ import httpx
 from voice_rag.config import settings
 from voice_rag.stt.convert import to_wav
 
-log = logging.getLogger("vaani.stt")
+log = logging.getLogger("echo.stt")
 
 SARVAM_URL = "https://api.sarvam.ai/speech-to-text"
 # Failures that mean "this key is bad / exhausted / throttled" — try the next.

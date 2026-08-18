@@ -1,6 +1,6 @@
 import type { AskResult } from './types'
 
-const KEY = 'vaani:last'
+const KEY = 'echo:last'
 
 export function saveResult(r: AskResult) {
   sessionStorage.setItem(KEY, JSON.stringify(r))
