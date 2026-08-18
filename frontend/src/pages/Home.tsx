@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Composer } from '../components/Composer'
-import { askText, fetchHealth, fetchSamples } from '../api'
-import type { Health, Sample } from '../types'
+import { askText, fetchHealth } from '../api'
+import { PROMPT_EXAMPLES } from '../prompts'
+import type { Health } from '../types'
 import { saveResult } from '../session'
 
 export function Home() {
@@ -12,11 +13,9 @@ export function Home() {
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   const [health, setHealth] = useState<Health | null>(null)
-  const [samples, setSamples] = useState<Sample[]>([])
 
   useEffect(() => {
     fetchHealth().then(setHealth).catch(() => setHealth(null))
-    fetchSamples().then(setSamples).catch(() => undefined)
   }, [])
 
   async function runText(query: string) {
@@ -60,12 +59,24 @@ export function Home() {
           />
           {busy && <p className="wait">retrieving…</p>}
           {err && <p className="err">{err}</p>}
-          <div className="chips">
-            {samples.slice(0, 5).map((s) => (
-              <button key={s.query} type="button" onClick={() => runText(s.query)}>
-                {s.query}
-              </button>
-            ))}
+          <div className="prompts">
+            <p className="prompts-label">Try a language</p>
+            <div className="chips">
+              {PROMPT_EXAMPLES.map((p) => (
+                <button
+                  key={`${p.lang}-${p.text}`}
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    setQ(p.text)
+                    void runText(p.text)
+                  }}
+                >
+                  <span className="chip-lang">{p.lang}</span>
+                  {p.text}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </section>

@@ -10,7 +10,14 @@ from __future__ import annotations
 
 import re
 
-from voice_rag.textutil import CLAUSE_SPLIT, content_tokens, sentences
+from voice_rag.textutil import (
+    CLAUSE_SPLIT,
+    capital_alignment,
+    content_tokens,
+    definition_alignment,
+    looks_like_question,
+    sentences,
+)
 from voice_rag.types import Hit, Span
 
 
@@ -206,6 +213,21 @@ def _score(query: str, cand: str, query_type: str, rank: int = 0, start: int = 0
             c_low,
         ):
             type_bonus += 0.7
+        if query_type == "LOCATION":
+            align = capital_alignment(query, cand)
+            if align < 0:
+                type_bonus += 1.65 * align
+            elif align > 0 and re.search(
+                r"(?:is|was)\s+the\s+capital|"
+                r",\s*the\s+capital|"
+                r"जो .{0,24}राजधानी|"
+                r"राजधानी असलेली|"
+                r"राजधानी है|"
+                r"ਰਾਜਧਾਨੀ ਹੈ|রাজধানী|தலைநகரம்|دارالحکومت",
+                cand,
+                flags=re.I,
+            ):
+                type_bonus += 0.55
         if query_type == "LOCATION" and re.search(
             r"क्षेत्र|विभाग|प्रांत|region|department|province|district", c_low
         ):
@@ -214,6 +236,10 @@ def _score(query: str, cand: str, query_type: str, rank: int = 0, start: int = 0
             type_bonus -= 0.45
         if query_type == "LOCATION" and stripped[:1].islower():
             type_bonus -= 0.4
+    if query_type == "DESCRIPTION":
+        type_bonus += 1.7 * definition_alignment(cand, query)
+        if _NUM.search(cand):
+            type_bonus -= 0.55
     if query_type in {"LOCATION", "PERSON", "ENTITY", "NUMERIC"}:
         length_pen = 0.0 if 8 <= len(cand) <= 240 else -0.12
     else:
@@ -230,6 +256,9 @@ def _score(query: str, cand: str, query_type: str, rank: int = 0, start: int = 0
         or c_set <= q_set
     ):
         echo_pen = -1.6
+    # MSMARCO dumps other questions into passages ("दक्षिण कोरियाची राजधानी कोणती आहे?").
+    if looks_like_question(cand):
+        echo_pen -= 2.6
     # "वे भारत के दूसरे राष्ट्रपति थे" is the *continuation* after the
     # name was split off at Indic danda (।). Never prefer a dangling pronoun.
     if _ANAPHOR_START.match(cand.strip()):
@@ -249,6 +278,8 @@ def _score(query: str, cand: str, query_type: str, rank: int = 0, start: int = 0
     # the old `0.35 * hit.score` term was a no-op and the reader picked
     # flashy entities from weak passages.
     rank_bonus = 1.25 / (1.0 + rank)
+    if query_type == "DESCRIPTION":
+        rank_bonus *= 0.5
     # Later clauses in the same parent need to be clearly better than
     # the opening definitional sentence (Bell vs "also Elisha Gray").
     pos_pen = -min(0.4, start / 350.0)

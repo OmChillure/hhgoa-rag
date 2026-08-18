@@ -1,5 +1,5 @@
 from voice_rag.retrieval.hybrid import has_all_specific, lexical_relevance, rrf
-from voice_rag.textutil import detect_language
+from voice_rag.textutil import capital_alignment, detect_language, infer_query_type
 
 
 def test_rrf_boosts_shared_ids():
@@ -27,6 +27,31 @@ def test_detect_language_disambiguates_shared_scripts():
     assert detect_language("ভারতের রাজধানী কোথায়") == "bn"
     assert detect_language("ভাৰতৰ ৰাজধানী কি") == "as"
     assert detect_language("இந்தியாவின் தலைநகரம் எது") == "ta"
+
+
+def test_capital_alignment_binds_subject():
+    q = "भारत की राजधानी क्या है"
+    assert capital_alignment(q, "नई दिल्ली, जो भारत की राजधानी है") > 0
+    assert capital_alignment(q, "चेन्नई भारतीय राज्य तमिलनाडु की राजधानी है") < 0
+    assert capital_alignment("भारताची राजधानी कोणती आहे", "भारताची राजधानी असलेली नवी दिल्ली") > 0
+    assert capital_alignment("भारताची राजधानी कोणती आहे", "दक्षिण कोरियाची राजधानी कोणती आहे?") < 0
+    assert capital_alignment("what is the capital of india", "New Delhi, the capital of India") > 0
+    assert capital_alignment(
+        "what is the capital of india",
+        "Chennai is the capital of the Indian state of Tamil Nadu",
+    ) < 0
+    assert capital_alignment(
+        "ਭਾਰਤ ਦੀ ਰਾਜਧਾਨੀ ਕੀ ਹੈ",
+        "ਚੇਨਈ ਭਾਰਤ ਦੇ ਤਾਮਿਲਨਾਡੂ ਰਾਜ ਦੀ ਰਾਜਧਾਨੀ ਹੈ।",
+    ) < 0
+    assert capital_alignment(
+        "ਭਾਰਤ ਦੀ ਰਾਜਧਾਨੀ ਕੀ ਹੈ",
+        "ਨਵੀਂ ਦਿੱਲੀ, ਜੋ ਕਿ ਭਾਰਤ ਦੀ ਰਾਜਧਾਨੀ ਹੈ, ਦਿੱਲੀ ਦਾ ਇੱਕ ਖੇਤਰ ਹੈ।",
+    ) > 0
+
+
+def test_infer_meaning_is_description():
+    assert infer_query_type("elevators meaning") == "DESCRIPTION"
 
 
 def test_lexical_requires_specific_term():

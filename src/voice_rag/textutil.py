@@ -132,6 +132,145 @@ def content_tokens(text: str) -> list[str]:
     return [t for t in tokenize(text) if t not in STOP and len(t) > 1]
 
 
+# Words that name the relation "capital", not the place being asked about.
+_CAPITAL_LEX = frozenset(
+    """
+    capital राजधानी तலைநகரம் રાજધાની ਰਾਜਧਾਨੀ دارالحکومت
+    തലസ്ഥാനം ರಾಜಧಾನಿ ରାଜଧାନୀ রাজধানী ৰাজধানী
+    """.split()
+)
+_SUBJECT_STOP = frozenset(
+    """
+    क्या कौन कहाँ कहां है था थे की का के को कौनसी कौनसा
+    कोणती आहे च्या ची चा चे क्याहे
+    क्या है எது என்ன கை કઈ કે ਕੀ کیا
+    কোথায় কী কি ಯಾವುದು ഏതാണ് କଣ का अस्ति हो
+    ਦੀ ਦੇ ਦਾ ਹੈ છે এর এরের හෝ
+    """.split()
+)
+_GENITIVE_SUFFIX = frozenset(
+    {
+        "ची", "चा", "चे", "च्या", "की", "का", "के", "को",
+        "ाची", "ाचा", "ाचे", "ाच्या", "ের", "ৰ", "દી", "ની",
+        "வின்", "ின்", "രുടെ", "स्य",
+    }
+)
+_SUBJECT_STRIP = (
+    "வின்", "ின்", "രുടെ", "स्य", "ाची", "ার", "ের", "ది", "ની", "ਦੀ", "को",
+)
+_CAPITAL_MARK = re.compile(
+    r"राजधानी|தலைநகரம்|રાજધાની|ਰਾਜਧਾਨੀ|دارالحکومت|"
+    r"തലസ്ഥാനം|ರಾಜಧಾನಿ|ରାଜଧାନୀ|রাজধানী|ৰাজধানী"
+)
+_DEFN_MARK = re.compile(
+    r"\(noun\)|\bthe noun\b|\bhas \d+ senses?\b|"
+    r"\b(?:defined as|consists of|consisting of|refers to)\b",
+    re.I,
+)
+
+
+def query_subjects(query: str) -> list[str]:
+    """Place/entity the question is about, minus 'capital' / question words."""
+    return [
+        t
+        for t in content_tokens(query)
+        if t not in _CAPITAL_LEX
+        and t not in _SUBJECT_STOP
+        and t not in STOP
+        and len(t) >= 3
+    ]
+
+
+def _subject_stems(subject: str) -> list[str]:
+    sl = (subject or "").lower()
+    out = [sl]
+    for suf in _SUBJECT_STRIP:
+        if sl.endswith(suf) and len(sl) - len(suf) >= 3:
+            out.append(sl[: -len(suf)])
+            break
+    return out
+
+
+def mentions_subject(text: str, subject: str) -> bool:
+    """True if `subject` appears as itself or a genitive (भारत/भारताची), not भारतीय."""
+    if not subject or not text:
+        return False
+    stems = _subject_stems(subject)
+    for t in content_tokens(text):
+        for sl in stems:
+            if t == sl:
+                return True
+            if len(t) > len(sl) and t.startswith(sl) and t[len(sl) :] in _GENITIVE_SUFFIX:
+                return True
+    return False
+
+
+def capital_alignment(query: str, text: str) -> float:
+    """+1 if the *owner* of 'capital' is the queried place.
+
+    Only the last few tokens before राजधानी / first tokens after 'capital of'
+    count. A 36-char window falsely treated 'India's Tamil Nadu' as India.
+    """
+    subjects = query_subjects(query)
+    if not subjects or not text:
+        return 0.0
+    owners: list[str] = []
+    for m in _CAPITAL_MARK.finditer(text):
+        owners.append(" ".join(content_tokens(text[: m.start()])[-3:]))
+    for m in re.finditer(r"capital of\s+", text, flags=re.I):
+        owners.append(" ".join(content_tokens(text[m.end() : m.end() + 48])[:4]))
+    if not owners:
+        return 0.0
+    if any(any(mentions_subject(w, s) for s in subjects) for w in owners):
+        return 1.0
+    return -1.0
+
+
+def definition_alignment(text: str, query: str = "") -> float:
+    """Definitional lead-in vs number-heavy factoid.
+
+    `is a` only counts when it defines the query's own headword
+    ("a fugue is a piece…"), not "Otis is an American company".
+    """
+    head = (text or "")[:360]
+    if _DEFN_MARK.search(head):
+        return 0.85
+    if query:
+        for tok in content_tokens(query):
+            if len(tok) < 4:
+                continue
+            stem = tok[:-1] if tok.endswith("s") and tok.isascii() else tok
+            if re.search(
+                rf"\b{re.escape(stem)}\w{{0,4}}\s+(?:is|are|means)\s+an?\b",
+                head,
+                flags=re.I,
+            ):
+                return 0.85
+    if len(re.findall(r"\d", head)) >= 4:
+        return -0.55
+    return 0.0
+
+
+def looks_like_question(text: str) -> bool:
+    s = (text or "").strip()
+    if not s:
+        return False
+    if s.endswith("?") or s.endswith("؟"):
+        return True
+    first = s.split("\n", 1)[0].strip()
+    return first.endswith("?") or first.endswith("؟")
+
+
+def bm25_query_tokens(query: str) -> list[str]:
+    """Tokenize a query for BM25, with a cheap English plural fold."""
+    toks = tokenize(query)
+    extra: list[str] = []
+    for t in toks:
+        if len(t) > 4 and t.endswith("s") and not t.endswith("ss") and t.isascii():
+            extra.append(t[:-1])
+    return toks + extra
+
+
 def token_set(text: str) -> set[str]:
     return set(content_tokens(text))
 
@@ -194,7 +333,7 @@ def infer_query_type(query: str) -> str:
     ):
         return "PERSON"
     if re.search(
-        r"\b(what is|what are|what does|define|meaning of|describe)\b"
+        r"\b(what is|what are|what does|define|meaning of|meaning|describe)\b"
         r"|क्या है|क्या होता|என்ன|શું છે|ਕੀ ਹੈ|کیا ہے|എന്താണ്|ಯಾವುದು|କଣ|কী\?| কি\?",
         q,
     ):

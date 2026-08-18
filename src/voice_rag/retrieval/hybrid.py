@@ -10,10 +10,14 @@ from typing import Any
 from voice_rag.config import settings
 from voice_rag.retrieval.store import FaissIndex
 from voice_rag.textutil import (
+    bm25_query_tokens,
+    capital_alignment,
     content_tokens,
+    definition_alignment,
     detect_language,
     infer_query_type,
     language_shard_candidates,
+    looks_like_question,
     tokenize,
 )
 from voice_rag.types import Chunk, ChunkStrategy, Hit
@@ -87,7 +91,10 @@ def lexical_relevance(query: str, text: str) -> float:
     defn = 0.0
     if re.search(r"\b(?:is|was|are|were) the\b", t_low) and not head.startswith(("what ", "who ", "which ", "where ")):
         defn = 0.35
-    return 1.5 * spec_hit + 0.75 * cover + 0.7 * phrase + defn - echo - topic_pen
+    defn += definition_alignment(text, query)
+    cap = 1.15 * capital_alignment(query, text)
+    qpen = 0.85 if looks_like_question(text) else 0.0
+    return 1.5 * spec_hit + 0.75 * cover + 0.7 * phrase + defn + cap - echo - topic_pen - qpen
 
 
 def has_all_specific(query: str, text: str) -> bool:
@@ -214,7 +221,12 @@ class HybridRetriever:
         if not lists and language != "en" and "en" in self.bm25_shards:
             take(self._bm25_from(query, settings.sparse_top_k, ["en"]), "bm25:en")
 
-        if not self._strong_bm25(query, lists[0] if lists else []):
+        if query_type == "DESCRIPTION":
+            heads = [t for t in specific_terms(query) if t not in {"meaning", "define", "describe"}]
+            if heads:
+                take(self._bm25_from(" ".join(heads[:2]), 24, primary), "bm25:head")
+
+        if self._needs_dense(query, query_type, lists[0] if lists else []):
             take(self._dense(query, settings.dense_top_k), "dense")
 
         fused = rrf(lists)
@@ -281,6 +293,21 @@ class HybridRetriever:
                 bm25.retrieve([[tok]], k=1, show_progress=False)
             except Exception:
                 continue
+
+    def _needs_dense(self, query: str, query_type: str, ids: list[str]) -> bool:
+        """Dense is the semantic backstop. Skip it only when BM25 already looks right."""
+        if not ids:
+            return True
+        if query_type == "DESCRIPTION":
+            for pid in ids[:4]:
+                ch = self.get_chunk(pid)
+                if ch is not None and definition_alignment(ch.text, query) > 0:
+                    return False
+            return True
+        if query_type == "LOCATION":
+            ch = self.get_chunk(ids[0])
+            return ch is None or capital_alignment(query, ch.text) <= 0
+        return not self._strong_bm25(query, ids)
 
     def _strong_bm25(self, query: str, ids: list[str]) -> bool:
         """True when lexical retrieval already covers the query well enough to skip dense."""
@@ -375,7 +402,7 @@ class HybridRetriever:
         return self._bm25_from(query, k, langs)
 
     def _bm25_from(self, query: str, k: int, langs: list[str]) -> list[tuple[str, float]]:
-        q_tokens = tokenize(query)
+        q_tokens = bm25_query_tokens(query)
         if not q_tokens or not langs:
             return []
         # Per-shard lists are RRF'd separately by the caller. Here we keep

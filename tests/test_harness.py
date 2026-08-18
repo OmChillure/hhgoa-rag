@@ -57,7 +57,60 @@ def test_extractive_prefers_inventor_over_related_person():
     assert "Emile Berliner" not in answer
 
 
+def test_extractive_hindi_capital_prefers_new_delhi():
+    chennai = (
+        "चेन्नई भारतीय राज्य तमिलनाडु की राजधानी है। "
+        "यह एक प्रमुख सांस्कृतिक केंद्र है और भारत का पाँचवाँ सबसे बड़ा शहर है।"
+    )
+    delhi = "नई दिल्ली, जो भारत की राजधानी है, दिल्ली में एक क्षेत्र है। नई दिल्ली भारत सरकार का केंद्र है।"
+    answer, _, _ = extract(
+        "भारत की राजधानी क्या है",
+        [_hit(chennai, 0, "c"), _hit(delhi, 2, "d")],
+        "LOCATION",
+    )
+    assert "दिल्ली" in answer
+    assert "चेन्नई" not in answer
+
+
+def test_extractive_marathi_skips_other_country_question():
+    gold = (
+        "१९९२ मध्ये राष्ट्रीय राजधानी क्षेत्र कायद्यांतर्गत "
+        "भारताची राजधानी असलेली नवी दिल्ली हे एक राज्य बनले."
+    )
+    bait = (
+        "दक्षिण कोरियाची राजधानी कोणती आहे? नकाशावर सोलचे स्थान. "
+        "सोल हे दक्षिण कोरियाचे राजधानी शहर आहे."
+    )
+    answer, _, _ = extract(
+        "भारताची राजधानी कोणती आहे",
+        [_hit(gold, 0, "g"), _hit(bait, 1, "b")],
+        "LOCATION",
+    )
+    assert "दिल्ली" in answer
+    assert "कोरिया" not in answer
+
+
+def test_extractive_meaning_prefers_definition():
+    gold = (
+        "ELEVATOR (noun) The noun ELEVATOR has 2 senses: 1. lifting device "
+        "consisting of a platform or cage that is raised and lowered mechanically "
+        "in a vertical shaft."
+    )
+    bait = (
+        "Burj Khalifa has a total of 57 elevators and eight escalators. "
+        "Among them are the world's tallest service elevator, which has a capacity of 5.500 kg."
+    )
+    answer, _, _ = extract(
+        "elevators meaning",
+        [_hit(bait, 0, "b"), _hit(gold, 1, "g")],
+        "DESCRIPTION",
+    )
+    assert "lifting device" in answer.lower()
+    assert "Burj" not in answer
+
+
 def test_who_invented_is_person():
+    assert infer_query_type("elevators meaning") == "DESCRIPTION"
     assert infer_query_type("who invented the telephone?") == "PERSON"
     assert infer_query_type("फ्रांस की राजधानी क्या है?") == "LOCATION"
     assert infer_query_type("भारत के पहले राष्ट्रपति कौन थे?") == "PERSON"
