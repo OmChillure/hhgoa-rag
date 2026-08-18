@@ -64,11 +64,17 @@ export type BenchLatency = {
   under_200ms_pct: number
 }
 
+export type BenchStatus = 'idle' | 'running' | 'ready' | 'error'
+
 export type Metrics = {
   live: BenchLatency
   bench: {
     n_queries?: number
     latency?: BenchLatency
     stages?: Record<string, BenchLatency>
+    source?: string
   }
+  bench_status?: BenchStatus
+  bench_error?: string
+  bench_n?: number
 }

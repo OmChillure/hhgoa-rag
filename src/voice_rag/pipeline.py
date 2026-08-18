@@ -19,10 +19,10 @@ class VoiceRAG:
         self.retriever.load(directory)
         self.harness = Harness(self.retriever)
 
-    def ask(self, query: str, mode: Mode = "fast") -> PipelineResult:
+    def ask(self, query: str, mode: Mode = "fast", *, use_cache: bool = True) -> PipelineResult:
         if self.harness is None:
             raise RuntimeError("index not loaded — run scripts/ingest.py first")
-        return self.harness.run(query, mode=mode)
+        return self.harness.run(query, mode=mode, use_cache=use_cache)
 
     def ask_audio(
         self,

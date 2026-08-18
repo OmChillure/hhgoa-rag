@@ -4,7 +4,7 @@ import { AnalyticsPanel } from '../components/AnalyticsPanel'
 import { Composer } from '../components/Composer'
 import { askText, fetchHealth, fetchMetrics } from '../api'
 import { loadResult, saveResult } from '../session'
-import type { AskResult, BenchLatency, Health } from '../types'
+import type { AskResult, BenchLatency, BenchStatus, Health, Metrics } from '../types'
 
 type Panel = 'retrieved' | 'analytics'
 
@@ -23,7 +23,17 @@ export function Result() {
   const [bench, setBench] = useState<BenchLatency | null>(null)
   const [live, setLive] = useState<BenchLatency | null>(null)
   const [stages, setStages] = useState<Record<string, BenchLatency>>({})
+  const [benchStatus, setBenchStatus] = useState<BenchStatus>('idle')
+  const [benchN, setBenchN] = useState(120)
   const [panel, setPanel] = useState<Panel>('retrieved')
+
+  function applyMetrics(m: Metrics) {
+    setBench(m.bench?.latency ?? null)
+    setLive(m.live ?? null)
+    setStages(m.bench?.stages ?? {})
+    setBenchStatus(m.bench_status ?? 'idle')
+    if (m.bench_n) setBenchN(m.bench_n)
+  }
 
   useEffect(() => {
     const stored = loadResult()
@@ -34,13 +44,25 @@ export function Result() {
     setData(stored)
     setQ('')
     fetchHealth().then(setHealth).catch(() => undefined)
-    fetchMetrics()
-      .then((m) => {
-        setBench(m.bench?.latency ?? null)
-        setLive(m.live ?? null)
-        setStages(m.bench?.stages ?? {})
-      })
-      .catch(() => undefined)
+    let stop = false
+    let timer = 0
+    const pull = () => {
+      fetchMetrics()
+        .then((m) => {
+          if (stop) return
+          applyMetrics(m)
+          const pending = m.bench_status === 'running' || m.bench_status === 'idle'
+          if (pending && !m.bench?.latency) {
+            timer = window.setTimeout(pull, 800)
+          }
+        })
+        .catch(() => undefined)
+    }
+    pull()
+    return () => {
+      stop = true
+      window.clearTimeout(timer)
+    }
   }, [nav])
 
   async function runText(query: string) {
@@ -54,13 +76,7 @@ export function Result() {
       setData(result)
       setSttMs(null)
       setQ('')
-      fetchMetrics()
-        .then((m) => {
-          setBench(m.bench?.latency ?? null)
-          setLive(m.live ?? null)
-          setStages(m.bench?.stages ?? {})
-        })
-        .catch(() => undefined)
+      fetchMetrics().then(applyMetrics).catch(() => undefined)
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'failed')
     } finally {
@@ -189,6 +205,8 @@ export function Result() {
               bench={bench}
               stages={stages}
               live={live}
+              benchStatus={benchStatus}
+              benchN={benchN}
               retrieval={retrieval}
               guardrail={guardrail}
               generation={generation}

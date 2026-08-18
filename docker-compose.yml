@@ -5,5 +5,9 @@ services:
       - "8080:8080"
     env_file:
       - .env
+    environment:
+      VAANI_INDEX_DIR: /app/vaani_index
+    volumes:
+      - ./vaani_index:/app/vaani_index:ro
     restart: unless-stopped
-    mem_limit: 3g
+    mem_limit: 6g

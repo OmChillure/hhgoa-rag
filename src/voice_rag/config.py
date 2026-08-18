@@ -45,6 +45,7 @@ class Settings(BaseSettings):
 
     # SLA
     sla_ms: float = 200.0
+    bench_n: int = Field(default=120, alias="VAANI_BENCH_N")
 
     # STT — one key, or rotate through several
     sarvam_api_key: str = Field(default="", alias="SARVAM_API_KEY")
