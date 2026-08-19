@@ -49,7 +49,7 @@ def _run_startup_sweep() -> None:
             return
         print(f"latency sweep: running {len(queries)} queries…", flush=True)
         payload = run_latency_sweep(
-            lambda q: _ask_sync(q, use_cache=False),
+            _ask_sync,
             queries,
             settings.sla_ms,
         )

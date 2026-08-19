@@ -11,10 +11,8 @@ Fast path: compiled DAG, extractive reader, no LLM.
 
 from __future__ import annotations
 
-from collections import OrderedDict
 from typing import Any, Callable, Literal
 
-from voice_rag.config import settings
 from voice_rag.generation.extractive import extract
 from voice_rag.guardrails.policy import (
     check_grounding,
@@ -49,16 +47,8 @@ class Harness:
             "ground_check": self.tool_ground,
             "refuse": self.tool_refuse,
         }
-        self._cache: OrderedDict[str, PipelineResult] = OrderedDict()
-        self._cache_max = max(0, int(getattr(settings, "query_cache_size", 256) or 0))
 
-    def run(self, query: str, mode: Mode = "fast", *, use_cache: bool = True) -> PipelineResult:
-        cache_key = (query or "").strip()
-        if use_cache and self._cache_max and cache_key and cache_key in self._cache:
-            hit = self._cache.pop(cache_key)
-            self._cache[cache_key] = hit
-            return hit.model_copy(deep=False)
-
+    def run(self, query: str, mode: Mode = "fast") -> PipelineResult:
         clock = Stopwatch()
         trace: list[dict[str, Any]] = []
         guards: list[GuardDecision] = []
@@ -95,7 +85,7 @@ class Harness:
         guards.append(safety)
         if not safety.allowed:
             ans = call("refuse", reason=safety.reason)
-            return self._finish(query, ans, guards, [], clock, trace, safety, use_cache=use_cache)
+            return self._finish(query, ans, guards, [], clock, trace, safety)
 
         meta = call("classify_query", query=query)
         hits: list[Hit] = call(
@@ -114,7 +104,7 @@ class Harness:
                 guards.append(ret)
             if not ret.allowed:
                 ans = call("refuse", reason=ret.reason)
-                return self._finish(query, ans, guards, hits, clock, trace, meta, use_cache=use_cache)
+                return self._finish(query, ans, guards, hits, clock, trace, meta)
 
         extracted = call(
             "extract_answer",
@@ -138,7 +128,7 @@ class Harness:
             if not ground.allowed:
                 ans = call("refuse", reason=ground.reason)
                 ans.citations = hits[:3]
-                return self._finish(query, ans, guards, hits, clock, trace, meta, use_cache=use_cache)
+                return self._finish(query, ans, guards, hits, clock, trace, meta)
 
         ans = Answer(
             text=extracted["text"],
@@ -150,7 +140,7 @@ class Harness:
             coverage=float((ground.details or {}).get("coverage") or 0.0),
             refused=False,
         )
-        return self._finish(query, ans, guards, hits, clock, trace, meta, use_cache=use_cache)
+        return self._finish(query, ans, guards, hits, clock, trace, meta)
 
     def _finish(
         self,
@@ -161,8 +151,6 @@ class Harness:
         clock: Stopwatch,
         trace: list[dict[str, Any]],
         meta: GuardDecision | dict[str, Any],
-        *,
-        use_cache: bool = True,
     ) -> PipelineResult:
         lang = "en"
         qtype = "UNKNOWN"
@@ -182,11 +170,6 @@ class Harness:
             sla_ok=total < 200.0,
             harness_trace=trace,
         )
-        cache_key = (query or "").strip()
-        if use_cache and self._cache_max and cache_key:
-            self._cache[cache_key] = result
-            while len(self._cache) > self._cache_max:
-                self._cache.popitem(last=False)
         return result
 
     # ----- tools -----

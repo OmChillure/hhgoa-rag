@@ -11,3 +11,22 @@ services:
       - ./vaani_index:/app/vaani_index:ro
     restart: unless-stopped
     mem_limit: 6g
+
+  caddy:
+    image: caddy:2
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SITE_HOST: ${SITE_HOST:-16.171.133.1.sslip.io}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - vaani
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:

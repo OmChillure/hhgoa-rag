@@ -226,7 +226,6 @@ def bench_end_to_end(rag, gold: list[dict], n: int) -> tuple[dict, list[dict]]:
     stage_ms: dict[str, list[float]] = defaultdict(list)
     ttft: list[float] = []
     records: list[dict] = []
-    cache_probe: list[float] = []
 
     for i in range(n):
         item = gold[i % len(gold)]
@@ -269,14 +268,6 @@ def bench_end_to_end(rag, gold: list[dict], n: int) -> tuple[dict, list[dict]]:
         if (i + 1) % 50 == 0:
             print(f"      {i + 1}/{n} queries...", flush=True)
 
-    # Cache turnaround: repeat a query already served, measure the delta.
-    repeat = gold[0]["query"]
-    rag.ask(repeat)
-    for _ in range(10):
-        t0 = time.perf_counter()
-        rag.ask(repeat)
-        cache_probe.append((time.perf_counter() - t0) * 1000.0)
-
     out = {
         "n": n,
         "p50_ms": percentile(total_ms, 50),
@@ -287,7 +278,6 @@ def bench_end_to_end(rag, gold: list[dict], n: int) -> tuple[dict, list[dict]]:
         "p100_ms": max(total_ms),
         "mean_ms": statistics.mean(total_ms),
         "ttft_ms": percentile(ttft, 50),
-        "cache_turnaround_ms": statistics.mean(cache_probe),
         "within_sla_pct": 100.0 * sum(1 for x in total_ms if x < settings.sla_ms) / n,
         "stages": {k: {"mean_ms": statistics.mean(v), "p95_ms": percentile(v, 95)}
                    for k, v in stage_ms.items()},
@@ -299,7 +289,6 @@ def bench_end_to_end(rag, gold: list[dict], n: int) -> tuple[dict, list[dict]]:
     print(row("P100 Latency (Max):", out["p100_ms"]))
     print(row("Mean (Average):", out["mean_ms"]))
     print(row("TTFT (Time to Token):", out["ttft_ms"]))
-    print(row("Cache Turnaround:", out["cache_turnaround_ms"]))
 
     print("\n    Stage breakdown (mean ms):")
     for name, s in sorted(out["stages"].items(), key=lambda kv: -kv[1]["mean_ms"]):

@@ -41,7 +41,6 @@ class Settings(BaseSettings):
     faiss_threads: int = 1
     parent_expand: int = 6
     min_retrieval_score: float = 0.012
-    query_cache_size: int = 256
 
     # SLA
     sla_ms: float = 200.0

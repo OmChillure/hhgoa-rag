@@ -52,7 +52,13 @@ export function Composer({
       recRef.current?.stop()
       return
     }
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    const grab = navigator.mediaDevices?.getUserMedia?.bind(navigator.mediaDevices)
+    if (!window.isSecureContext || !grab) {
+      throw new Error(
+        'Mic needs HTTPS. This http://IP page is not a secure context, so the browser hides getUserMedia. Type the question, or open the https://…sslip.io URL.',
+      )
+    }
+    const stream = await grab({ audio: true })
     const mime = ['audio/webm;codecs=opus', 'audio/webm'].find((t) => MediaRecorder.isTypeSupported(t))
     const rec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream)
     chunks.current = []
