@@ -1,4 +1,4 @@
-from voice_rag.generation.slm import SpanRewriter
+from voice_rag.generation.slm import SpanRewriter, rewrite_is_faithful
 from voice_rag.harness.orchestrator import Harness
 from voice_rag.types import Chunk, ChunkStrategy, Hit
 
@@ -31,6 +31,14 @@ class _FakeSLM:
     def rewrite(self, query: str, span: str, timeout_ms: float | None = None) -> str:
         self.calls += 1
         return self.text
+
+
+def test_faithful_rewrite_rejects_hallucination_and_dangling():
+    span = "Goa, a state on India's West coast, is a former Portuguese colony."
+    assert rewrite_is_faithful("Goa is a state on India's West coast.", span)
+    assert not rewrite_is_faithful("Goa is a country in the South East region of", span)
+    assert not rewrite_is_faithful("the cost of capital", span)
+    assert not rewrite_is_faithful("tea", "dried leaves of the tea shrub used to make tea")
 
 
 def test_rewrite_is_noop_until_loaded():

@@ -167,6 +167,13 @@ _DEFN_MARK = re.compile(
     r"\b(?:defined as|consists of|consisting of|refers to)\b",
     re.I,
 )
+FINANCE_CAPITAL = re.compile(
+    r"\bcost of capital\b|\bwacc\b|\bmarginal cost of capital\b|"
+    r"\bweighted average\b|\bcost of (?:debt|equity)\b|"
+    r"\blast dollar of capital\b",
+    re.I,
+)
+BREADCRUMB = re.compile(r"(?:[A-Za-z][\w.'’ -]+\s*>\s*){2,}")
 
 
 def query_subjects(query: str) -> list[str]:
@@ -237,7 +244,7 @@ def definition_alignment(text: str, query: str = "") -> float:
         return 0.85
     if query:
         for tok in content_tokens(query):
-            if len(tok) < 4:
+            if len(tok) < 3:
                 continue
             stem = tok[:-1] if tok.endswith("s") and tok.isascii() else tok
             if re.search(

@@ -49,7 +49,7 @@ class Settings(BaseSettings):
     # Tiny local generator — always runs after extract
     slm_enabled: bool = Field(default=True, alias="VAANI_SLM")
     slm_model: str = Field(default="google/flan-t5-small", alias="VAANI_SLM_MODEL")
-    slm_max_new_tokens: int = 12
+    slm_max_new_tokens: int = 24
     slm_timeout_ms: float = 80.0
     slm_threads: int = Field(default=2, alias="VAANI_SLM_THREADS")
     slm_cache_dir: Path = Field(default=ROOT / "models", alias="VAANI_SLM_CACHE")

@@ -11,6 +11,7 @@ from typing import Any
 from voice_rag.config import settings
 from voice_rag.retrieval.store import FaissIndex
 from voice_rag.textutil import (
+    FINANCE_CAPITAL,
     bm25_query_tokens,
     capital_alignment,
     content_tokens,
@@ -19,6 +20,7 @@ from voice_rag.textutil import (
     infer_query_type,
     language_shard_candidates,
     looks_like_question,
+    query_subjects,
     tokenize,
 )
 from voice_rag.types import Chunk, ChunkStrategy, Hit
@@ -51,8 +53,19 @@ def rrf(rank_lists: list[list[str]], k: int = 60) -> dict[str, float]:
 
 
 def specific_terms(query: str) -> list[str]:
-    """Content tokens that should appear in a relevant passage."""
-    return [t for t in content_tokens(query) if len(t) >= 5 and t not in _Q_STEMS]
+    """Content tokens that should appear in a relevant passage.
+
+    Keep 3–4 letter place names (goa, pune, usa). Dropping them made
+    "capital of goa" match finance 'cost of capital' over geography.
+    """
+    out: list[str] = []
+    for t in content_tokens(query):
+        if t in _Q_STEMS:
+            continue
+        if len(t) >= 5 or 3 <= len(t) <= 4:
+            if t not in out:
+                out.append(t)
+    return out
 
 
 def lexical_relevance(query: str, text: str) -> float:
@@ -95,6 +108,13 @@ def lexical_relevance(query: str, text: str) -> float:
     defn += definition_alignment(text, query)
     cap = 1.15 * capital_alignment(query, text)
     qpen = 0.85 if looks_like_question(text) else 0.0
+    subs = query_subjects(query)
+    if subs and not any(s in t_set for s in subs):
+        topic_pen += 1.25
+    if FINANCE_CAPITAL.search(t_low) and subs:
+        topic_pen += 1.6
+    if text.count(";") >= 4:
+        topic_pen += 0.9
     return 1.5 * spec_hit + 0.75 * cover + 0.7 * phrase + defn + cap - echo - topic_pen - qpen
 
 

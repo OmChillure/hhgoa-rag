@@ -548,6 +548,12 @@ body {
   border: 1px solid #3a3a3a;
   box-shadow: 0 10px 40px #000;
 }
+.composer.is-bar .mode-select {
+  flex: none;
+  height: 32px;
+  padding: 0 22px 0 10px;
+  font-size: 10px;
+}
 .inline-input {
   flex: 1;
   min-width: 0;

@@ -90,6 +90,31 @@ def test_extractive_marathi_skips_other_country_question():
     assert "कोरिया" not in answer
 
 
+def test_extractive_what_is_tea_not_a_catalog():
+    catalog = (
+        "Berry Tea; Caramel Tea; Chamomile Tea; Citrus Tea; Cinnamon Tea; "
+        "Earl Grey Tea; Floral Tea; Ginger Tea; Rose Tea; Vanilla Tea"
+    )
+    definition = (
+        "TEA LEAF (noun). The noun TEA LEAF has 1 sense: 1. dried leaves of "
+        "the tea shrub; used to make tea."
+    )
+    prose = (
+        "Oolong tea is a traditional Chinese tea. It's made from the leaves of "
+        "the Camellia sinensis plant, the same plant used to make green tea and black tea."
+    )
+    answer, _, _ = extract(
+        "what is tea?",
+        [_hit(catalog, 0, "c"), _hit(prose, 1, "p"), _hit(definition, 2, "d")],
+        "DESCRIPTION",
+    )
+    low = answer.lower()
+    assert "tea" in low
+    assert len(answer.split()) >= 5
+    assert "Berry Tea" not in answer
+    assert "dried leaves" in low or "camellia" in low or "chinese tea" in low
+
+
 def test_extractive_meaning_prefers_definition():
     gold = (
         "ELEVATOR (noun) The noun ELEVATOR has 2 senses: 1. lifting device "
@@ -189,6 +214,38 @@ def test_extractive_prefers_is_the_capital_sentence():
     )
     assert "Paris" in answer
     assert "City of Light" not in answer
+
+
+def test_extractive_goa_not_finance_capital():
+    finance = (
+        "Factors Affecting the Cost of Capital. The marginal cost of capital "
+        "(MCC) is the cost of the last dollar of capital raised. WACC = (wd)(kd)(1-t)."
+    )
+    geo = (
+        "Asia > South Asia > India > Western India > Goa. Goa, a state on "
+        "India's West coast, is a former Portuguese colony with a rich history."
+    )
+    answer, _, _ = extract(
+        "capital of goa",
+        [_hit(finance, 0, "f"), _hit(geo, 1, "g")],
+        "LOCATION",
+    )
+    assert "Goa" in answer
+    assert "WACC" not in answer
+    assert "cost of capital" not in answer.lower()
+
+
+def test_extractive_where_is_goa_prefers_state_sentence():
+    parent = (
+        "Asia > South Asia > India > Western India > Goa. Goa, a state on "
+        "India's West coast, is a former Portuguese colony with a rich history. "
+        "Spread over 3,700 square kilometres with a population of approximately "
+        "1.4 million, Goa is small by Indian standards."
+    )
+    answer, _, _ = extract("where is goa", [_hit(parent, 0)], "LOCATION")
+    assert "state" in answer.lower()
+    assert "West" in answer or "west" in answer.lower()
+    assert answer.count(">") < 2
 
 
 def test_extractive_names_the_president():

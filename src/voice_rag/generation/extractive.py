@@ -11,11 +11,14 @@ from __future__ import annotations
 import re
 
 from voice_rag.textutil import (
+    BREADCRUMB,
     CLAUSE_SPLIT,
+    FINANCE_CAPITAL,
     capital_alignment,
     content_tokens,
     definition_alignment,
     looks_like_question,
+    query_subjects,
     sentences,
 )
 from voice_rag.types import Hit, Span
@@ -78,7 +81,14 @@ _Q_STEMS = frozenset(
 
 
 def _specific_terms(q_toks: list[str]) -> list[str]:
-    return [t for t in q_toks if len(t) >= 5 and t not in _Q_STEMS]
+    out: list[str] = []
+    for t in q_toks:
+        if t in _Q_STEMS:
+            continue
+        if len(t) >= 5 or 3 <= len(t) <= 4:
+            if t not in out:
+                out.append(t)
+    return out
 
 
 def _person_name(phrase: str, q_set: set[str]) -> bool:
@@ -236,14 +246,31 @@ def _score(query: str, cand: str, query_type: str, rank: int = 0, start: int = 0
             type_bonus -= 0.45
         if query_type == "LOCATION" and stripped[:1].islower():
             type_bonus -= 0.4
+        if query_type == "LOCATION":
+            places = query_subjects(query)
+            if places and not any(p in c_set for p in places):
+                type_bonus -= 1.9
+            if FINANCE_CAPITAL.search(cand):
+                type_bonus -= 2.4
+            if BREADCRUMB.search(cand):
+                type_bonus -= 1.1
+            if re.search(r"\bwhere\b|कहाँ|कहां|কোথায়", query.lower()) and re.search(
+                r"\b(?:state|city|town|located|west coast|east coast|coast of)\b",
+                c_low,
+            ):
+                type_bonus += 0.45
     if query_type == "DESCRIPTION":
         type_bonus += 1.7 * definition_alignment(cand, query)
         if _NUM.search(cand):
             type_bonus -= 0.55
+        if cand.count(";") >= 3:
+            type_bonus -= 1.6
+        if len(c_toks) < 6:
+            type_bonus -= 1.5
     if query_type in {"LOCATION", "PERSON", "ENTITY", "NUMERIC"}:
         length_pen = 0.0 if 8 <= len(cand) <= 240 else -0.12
     else:
-        length_pen = 0.0 if 40 <= len(cand) <= 280 else -0.15
+        length_pen = 0.0 if 48 <= len(cand) <= 280 else -0.55
     spec_pen = -0.45 * miss
     echo_pen = 0.0
     q_core = re.sub(r"[?؟।.]+$", "", q_low).strip()
