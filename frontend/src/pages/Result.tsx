@@ -134,7 +134,7 @@ export function Result() {
               <p className="page-kicker">Retrieved</p>
               <div className={`status ${data.sla_ok ? 'ok' : ''}`}>
                 <span className="dot" />
-                {data.sla_ok ? 'under 200 ms' : `${data.total_ms.toFixed(0)} ms`}
+                {data.sla_ok ? 'under 170 ms' : `${data.total_ms.toFixed(0)} ms`}
               </div>
             </header>
             <p className="question">{data.transcript || data.query}</p>

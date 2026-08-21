@@ -43,14 +43,16 @@ class Settings(BaseSettings):
     min_retrieval_score: float = 0.012
 
     # SLA
-    sla_ms: float = 200.0
+    sla_ms: float = 170.0
     bench_n: int = Field(default=120, alias="VAANI_BENCH_N")
 
-    # Tiny local generator — rewrites the extractive span only
+    # Tiny local generator — always runs after extract
     slm_enabled: bool = Field(default=True, alias="VAANI_SLM")
     slm_model: str = Field(default="google/flan-t5-small", alias="VAANI_SLM_MODEL")
-    slm_max_new_tokens: int = 16
+    slm_max_new_tokens: int = 12
     slm_timeout_ms: float = 80.0
+    slm_threads: int = Field(default=2, alias="VAANI_SLM_THREADS")
+    slm_cache_dir: Path = Field(default=ROOT / "models", alias="VAANI_SLM_CACHE")
 
     # STT — one key, or rotate through several
     sarvam_api_key: str = Field(default="", alias="SARVAM_API_KEY")

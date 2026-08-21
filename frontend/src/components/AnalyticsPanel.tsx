@@ -58,7 +58,7 @@ export function AnalyticsPanel({
         <p className="tel-note">
           {measuring
             ? `Measuring P50 / P70 / P100 over ${benchN} test queries…`
-            : `P50 / P70 / P100 across ${n || '—'} test queries — not this one ask · SLA < 200 ms`}
+            : `P50 / P70 / P100 across ${n || '—'} test queries — not this one ask · SLA < 170 ms`}
         </p>
         <div className="gauges">
           <Gauge
@@ -81,7 +81,7 @@ export function AnalyticsPanel({
           <p className="tel-note">
             {lat.p90_ms != null ? `P90 ${lat.p90_ms.toFixed(1)} ms` : ''}
             {lat.mean_ms != null ? ` · mean ${lat.mean_ms.toFixed(1)} ms` : ''}
-            {hit != null ? ` · ${hit.toFixed(0)}% under 200 ms` : ''}
+            {hit != null ? ` · ${hit.toFixed(0)}% under 170 ms` : ''}
           </p>
         )}
         {benchStatus === 'error' && !lat && (
@@ -113,12 +113,12 @@ export function AnalyticsPanel({
                 <Gauge label="P70 retrieve" value={retrieveBench.p70_ms} />
               </div>
               <div className="bars">
-                <Bar label="P50" ms={retrieveBench.p50_ms} max={200} />
-                <Bar label="P70" ms={retrieveBench.p70_ms} max={200} />
+                <Bar label="P50" ms={retrieveBench.p50_ms} max={170} />
+                <Bar label="P70" ms={retrieveBench.p70_ms} max={170} />
                 {retrieveBench.p90_ms != null && (
-                  <Bar label="P90" ms={retrieveBench.p90_ms} max={200} />
+                  <Bar label="P90" ms={retrieveBench.p90_ms} max={170} />
                 )}
-                <Bar label="P100" ms={retrieveBench.p100_ms} max={200} />
+                <Bar label="P100" ms={retrieveBench.p100_ms} max={170} />
               </div>
             </>
           ) : measuring ? (

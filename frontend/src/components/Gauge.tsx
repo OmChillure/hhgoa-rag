@@ -33,7 +33,7 @@ function valueAngle(value: number, max: number) {
   return START + t * SWEEP
 }
 
-export function Gauge({ label, value, max = 200, unit = 'ms', hint }: Props) {
+export function Gauge({ label, value, max = 170, unit = 'ms', hint }: Props) {
   const v = value ?? 0
   const ok = value != null && value < max
   const needle = ok ? '#fee101' : '#e08a72'

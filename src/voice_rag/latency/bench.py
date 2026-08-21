@@ -120,8 +120,8 @@ def run_latency_sweep(
     slowest = sorted(per_query, key=lambda r: r["ms"], reverse=True)[:5]
     return {
         "n_queries": len(totals),
-        "latency": summarize(totals),
-        "stages": {name: summarize(vals) for name, vals in stages.items()},
+        "latency": summarize(totals, sla_ms=sla_ms),
+        "stages": {name: summarize(vals, sla_ms=sla_ms) for name, vals in stages.items()},
         "sla_ms": sla_ms,
         "source": "startup_sweep",
         "slowest": slowest,

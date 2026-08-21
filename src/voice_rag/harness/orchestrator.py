@@ -187,7 +187,7 @@ class Harness:
             hits=hits,
             timings=clock.to_list(),
             total_ms=total,
-            sla_ok=total < 200.0,
+            sla_ok=total < float(settings.sla_ms),
             harness_trace=trace,
         )
         return result

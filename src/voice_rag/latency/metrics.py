@@ -39,9 +39,11 @@ def percentile(values: Iterable[float], p: float) -> float:
     return float(np.percentile(arr, p))
 
 
-def summarize(latencies_ms: list[float]) -> dict:
+def summarize(latencies_ms: list[float], sla_ms: float = 170.0) -> dict:
+    under = sum(1 for x in latencies_ms if x < sla_ms)
+    n = len(latencies_ms)
     return {
-        "n": len(latencies_ms),
+        "n": n,
         "mean_ms": float(np.mean(latencies_ms)) if latencies_ms else 0.0,
         "p50_ms": percentile(latencies_ms, 50),
         "p70_ms": percentile(latencies_ms, 70),
@@ -49,12 +51,9 @@ def summarize(latencies_ms: list[float]) -> dict:
         "p100_ms": percentile(latencies_ms, 100),
         "min_ms": float(min(latencies_ms)) if latencies_ms else 0.0,
         "max_ms": float(max(latencies_ms)) if latencies_ms else 0.0,
-        "under_200ms": sum(1 for x in latencies_ms if x < 200.0),
-        "under_200ms_pct": (
-            100.0 * sum(1 for x in latencies_ms if x < 200.0) / len(latencies_ms)
-            if latencies_ms
-            else 0.0
-        ),
+        "under_200ms": under,
+        "under_200ms_pct": (100.0 * under / n) if n else 0.0,
+        "sla_ms": sla_ms,
     }
 
 

@@ -10,3 +10,4 @@ bm25s>=0.2
 orjson>=3.10
 sentence-transformers>=3.0
 optimum[onnxruntime]>=1.24
+ctranslate2>=4.5
