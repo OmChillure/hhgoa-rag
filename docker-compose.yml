@@ -12,7 +12,7 @@ services:
       - ./vaani_index:/app/vaani_index:ro
       - ./models:/app/models
     restart: unless-stopped
-    mem_limit: 7g
+    mem_limit: 24g
 
   caddy:
     image: caddy:2
