@@ -46,6 +46,12 @@ class Settings(BaseSettings):
     sla_ms: float = 200.0
     bench_n: int = Field(default=120, alias="VAANI_BENCH_N")
 
+    # Tiny local generator — rewrites the extractive span only
+    slm_enabled: bool = Field(default=True, alias="VAANI_SLM")
+    slm_model: str = Field(default="google/flan-t5-small", alias="VAANI_SLM_MODEL")
+    slm_max_new_tokens: int = 16
+    slm_timeout_ms: float = 80.0
+
     # STT — one key, or rotate through several
     sarvam_api_key: str = Field(default="", alias="SARVAM_API_KEY")
     sarvam_api_key_2: str = Field(default="", alias="SARVAM_API_KEY_2")

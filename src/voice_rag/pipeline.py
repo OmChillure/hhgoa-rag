@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from voice_rag.config import settings
+from voice_rag.generation.slm import SpanRewriter
 from voice_rag.harness.orchestrator import Harness, Mode
 from voice_rag.retrieval.hybrid import HybridRetriever
 from voice_rag.stt.sarvam import transcribe
@@ -12,12 +13,14 @@ from voice_rag.types import PipelineResult, StageTiming
 class VoiceRAG:
     def __init__(self) -> None:
         self.retriever = HybridRetriever()
+        self.slm = SpanRewriter()
         self.harness: Harness | None = None
 
     def load(self, directory: Path | None = None) -> None:
         directory = directory or settings.index_dir
         self.retriever.load(directory)
-        self.harness = Harness(self.retriever)
+        self.slm.load()
+        self.harness = Harness(self.retriever, slm=self.slm)
 
     def ask(self, query: str, mode: Mode = "fast") -> PipelineResult:
         if self.harness is None:

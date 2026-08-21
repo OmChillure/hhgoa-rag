@@ -6,14 +6,16 @@ Not a raw prompt-in / text-out call. Every turn is a tool graph with:
 - a recorded trace
 - first-class refusal
 
-Fast path: compiled DAG, extractive reader, no LLM.
+Fast path: compiled DAG, extractive reader, then a tiny SLM rewrite.
 """
 
 from __future__ import annotations
 
-from typing import Any, Callable, Literal
+from typing import Any, Callable, Literal, Protocol
 
+from voice_rag.config import settings
 from voice_rag.generation.extractive import extract
+from voice_rag.generation.slm import SpanRewriter
 from voice_rag.guardrails.policy import (
     check_grounding,
     check_input,
@@ -21,9 +23,12 @@ from voice_rag.guardrails.policy import (
     refusal_text,
 )
 from voice_rag.latency.metrics import Stopwatch
-from voice_rag.retrieval.hybrid import HybridRetriever
 from voice_rag.textutil import detect_language, infer_query_type
 from voice_rag.types import Answer, GuardDecision, Hit, PipelineResult
+
+
+class _Searcher(Protocol):
+    def search(self, query: str, language: str = "en", query_type: str = "UNKNOWN") -> list[Hit]: ...
 
 
 Mode = Literal["fast"]
@@ -37,13 +42,15 @@ class ToolError(Exception):
 
 
 class Harness:
-    def __init__(self, retriever: HybridRetriever) -> None:
+    def __init__(self, retriever: _Searcher, slm: SpanRewriter | None = None) -> None:
         self.retriever = retriever
+        self.slm = slm
         self.tools: dict[str, Callable[..., Any]] = {
             "safety_check": self.tool_safety_check,
             "classify_query": self.tool_classify,
             "retrieve": self.tool_retrieve,
             "extract_answer": self.tool_extract,
+            "generate_answer": self.tool_generate,
             "ground_check": self.tool_ground,
             "refuse": self.tool_refuse,
         }
@@ -130,14 +137,27 @@ class Harness:
                 ans.citations = hits[:3]
                 return self._finish(query, ans, guards, hits, clock, trace, meta)
 
+        text = extracted["text"]
+        mode = extracted.get("mode", "extractive")
+        coverage = float((ground.details or {}).get("coverage") or 0.0)
+        generated = call("generate_answer", query=query, span=text)
+        gen_text = str((generated or {}).get("text") or "").strip()
+        if gen_text:
+            gen_ground = call("ground_check", answer=gen_text, hits=hits)
+            guards.append(gen_ground)
+            if gen_ground.allowed:
+                text = gen_text
+                mode = "generate"
+                coverage = float((gen_ground.details or {}).get("coverage") or coverage)
+
         ans = Answer(
-            text=extracted["text"],
-            mode=extracted.get("mode", "extractive"),
+            text=text,
+            mode=mode,
             confidence=float(extracted.get("confidence") or 0.0),
             spans=extracted.get("spans") or [],
             citations=hits[:4],
             grounded=True,
-            coverage=float((ground.details or {}).get("coverage") or 0.0),
+            coverage=coverage,
             refused=False,
         )
         return self._finish(query, ans, guards, hits, clock, trace, meta)
@@ -192,6 +212,15 @@ class Harness:
         text, spans, conf = extract(query, hits, query_type)
         alts = [s.text for s in spans[1:]]
         return {"text": text, "spans": spans, "confidence": conf, "alts": alts, "mode": "extractive"}
+
+    def tool_generate(self, query: str, span: str) -> dict[str, Any]:
+        if self.slm is None or not self.slm.ready:
+            return {"text": "", "mode": "generate"}
+        try:
+            text = self.slm.rewrite(query, span, timeout_ms=settings.slm_timeout_ms)
+        except Exception:  # noqa: BLE001
+            return {"text": "", "mode": "generate"}
+        return {"text": (text or "").strip(), "mode": "generate"}
 
     def tool_ground(self, answer: str, hits: list[Hit]) -> GuardDecision:
         return check_grounding(answer, hits)

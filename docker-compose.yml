@@ -7,10 +7,12 @@ services:
       - .env
     environment:
       VAANI_INDEX_DIR: /app/vaani_index
+      HF_HOME: /app/models
     volumes:
       - ./vaani_index:/app/vaani_index:ro
+      - ./models:/app/models
     restart: unless-stopped
-    mem_limit: 6g
+    mem_limit: 7g
 
   caddy:
     image: caddy:2

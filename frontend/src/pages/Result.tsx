@@ -86,7 +86,7 @@ export function Result() {
   const stt = data.stt_ms ?? 0
   const retrieval = stageMs(data, 'retrieve')
   const guardrail = stageMs(data, 'safety_check') + stageMs(data, 'ground_check')
-  const generation = stageMs(data, 'extract_answer')
+  const generation = stageMs(data, 'extract_answer') + stageMs(data, 'generate_answer')
   const e2e = stt + data.total_ms
   const grounded = data.guardrails.find((g) => g.stage === 'grounding')
   const inputG = data.guardrails.find((g) => g.stage === 'input')

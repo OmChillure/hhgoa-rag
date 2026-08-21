@@ -134,11 +134,13 @@ def _serialize(result: PipelineResult) -> dict[str, Any]:
 def health() -> dict[str, Any]:
     ready = rag.harness is not None
     stats = rag.retriever.stats() if ready else {}
+    slm = rag.slm.ready if rag.harness is not None else False
     return {
         "ok": True,
         "ready": ready,
         "sarvam": bool(settings.sarvam_key_list()),
         "sarvam_keys": len(settings.sarvam_key_list()),
+        "slm": slm,
         "stats": stats,
         "sla_ms": settings.sla_ms,
     }
