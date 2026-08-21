@@ -44,14 +44,6 @@ export type AskResult = {
   stt_ms?: number | null
 }
 
-export type Health = {
-  ready: boolean
-  sarvam: boolean
-  sarvam_keys: number
-  sla_ms: number
-  stats: { chunks?: number }
-}
-
 export type Sample = { query: string; hi_query?: string; query_type?: string }
 
 export type BenchLatency = {

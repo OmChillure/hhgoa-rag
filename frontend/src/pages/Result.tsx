@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { AnalyticsPanel } from '../components/AnalyticsPanel'
 import { Composer } from '../components/Composer'
-import { askText, fetchHealth, fetchMetrics } from '../api'
+import { askText, fetchMetrics } from '../api'
 import { loadResult, saveResult } from '../session'
-import type { AskResult, BenchLatency, BenchStatus, Health, Metrics } from '../types'
+import type { AskResult, BenchLatency, BenchStatus, Metrics } from '../types'
 
 type Panel = 'retrieved' | 'analytics'
 
@@ -19,7 +19,6 @@ export function Result() {
   const [sttMs, setSttMs] = useState<number | null>(null)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
-  const [health, setHealth] = useState<Health | null>(null)
   const [bench, setBench] = useState<BenchLatency | null>(null)
   const [live, setLive] = useState<BenchLatency | null>(null)
   const [stages, setStages] = useState<Record<string, BenchLatency>>({})
@@ -43,7 +42,6 @@ export function Result() {
     }
     setData(stored)
     setQ('')
-    fetchHealth().then(setHealth).catch(() => undefined)
     let stop = false
     let timer = 0
     const pull = () => {
@@ -134,7 +132,7 @@ export function Result() {
           <>
             <header className="nav result-nav">
               <p className="page-kicker">Retrieved</p>
-              <div className={`status ${health?.ready ? 'ok' : ''}`}>
+              <div className={`status ${data.sla_ok ? 'ok' : ''}`}>
                 <span className="dot" />
                 {data.sla_ok ? 'under 200 ms' : `${data.total_ms.toFixed(0)} ms`}
               </div>
@@ -227,7 +225,7 @@ export function Result() {
             onSubmit={() => runText(q)}
             busy={busy}
             dock
-            canVoice={health?.sarvam}
+            canVoice
           />
           <div className="dock-spacer" aria-hidden="true" />
         </div>

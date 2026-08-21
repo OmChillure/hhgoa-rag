@@ -1,4 +1,4 @@
-# Echo
+grok# Echo
 
 Voice RAG for HH GOA — ask in speech or text, get a grounded span back from a slice of [MSMARCO-XI](https://huggingface.co/datasets/ai4bharat/MSMARCO-XI). If the index cannot support an answer, Echo refuses instead of inventing one.
 

@@ -1,9 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Composer } from '../components/Composer'
-import { askText, fetchHealth } from '../api'
+import { askText } from '../api'
 import { PROMPT_EXAMPLES } from '../prompts'
-import type { Health } from '../types'
 import { saveResult } from '../session'
 
 export function Home() {
@@ -12,11 +11,6 @@ export function Home() {
   const [sttMs, setSttMs] = useState<number | null>(null)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
-  const [health, setHealth] = useState<Health | null>(null)
-
-  useEffect(() => {
-    fetchHealth().then(setHealth).catch(() => setHealth(null))
-  }, [])
 
   async function runText(query: string) {
     const text = query.trim()
@@ -39,9 +33,9 @@ export function Home() {
     <>
       <header className="nav">
         <span className="mark">HH GOA</span>
-        <div className={`status ${health?.ready ? 'ok' : ''}`}>
+        <div className="status ok">
           <span className="dot" />
-          {health?.ready ? `${health.stats.chunks ?? 0} chunks · live` : 'index offline'}
+          live
         </div>
       </header>
       <section className="home">
@@ -55,7 +49,7 @@ export function Home() {
             onStt={setSttMs}
             onSubmit={() => runText(q)}
             busy={busy}
-            canVoice={health?.sarvam}
+            canVoice
           />
           {busy && <p className="wait">retrieving…</p>}
           {err && <p className="err">{err}</p>}

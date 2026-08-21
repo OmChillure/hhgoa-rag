@@ -1,10 +1,4 @@
-import type { AskResult, Health, Metrics, Sample } from './types'
-
-export async function fetchHealth(): Promise<Health> {
-  const r = await fetch('/api/health')
-  if (!r.ok) throw new Error('health failed')
-  return r.json()
-}
+import type { AskResult, Metrics, Sample } from './types'
 
 export async function fetchMetrics(): Promise<Metrics> {
   const r = await fetch('/api/metrics')
