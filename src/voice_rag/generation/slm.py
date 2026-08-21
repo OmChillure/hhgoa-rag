@@ -9,35 +9,58 @@ from __future__ import annotations
 
 from pathlib import Path
 import re
+import threading
 
 from voice_rag.config import settings
-from voice_rag.textutil import STOP, coverage, token_set
+from voice_rag.textutil import (
+    STOP,
+    coverage,
+    identity_person_query,
+    infer_query_type,
+    looks_like_headline,
+    query_subjects,
+    token_set,
+)
 
 _DANGLE = re.compile(
     r"(?:^|[\s,;])(?:of|the|a|an|in|to|for|and|or|on|at|by|from|with|as)\s*$",
     re.I,
 )
-_OK_EXTRA = frozenset("is are was were be been being its".split()) | STOP
+_OK_EXTRA = frozenset(
+    "is are was were be been being its called known named which that this "
+    "from made used also such like one same has have had using "
+    "है हैं था थे थी एक आहे आहेत होते होता ਹੈ ਹਨ છે হয় ஆவார் ہے ہیں ایک".split()
+) | STOP
 
 
-def rewrite_is_faithful(answer: str, span: str) -> bool:
+def rewrite_is_faithful(answer: str, span: str, query: str = "") -> bool:
     """True if the model sentence is a complete rewrite of `span`, not a new fact."""
     text = (answer or "").strip()
     words = [w for w in text.split() if w]
-    if len(words) < 5 or _DANGLE.search(text):
+    if len(words) < 3 or _DANGLE.search(text):
         return False
-    if coverage(text, span) < 0.72:
+    if looks_like_headline(text):
         return False
     extra = token_set(text) - token_set(span) - _OK_EXTRA
     extra = {t for t in extra if len(t) > 2}
-    return not extra
+    if extra:
+        return False
+    if query:
+        qtype = infer_query_type(query)
+        keep_subject = qtype in {"DESCRIPTION", "ENTITY"} or identity_person_query(query)
+        if keep_subject:
+            subs = query_subjects(query)
+            span_toks = token_set(span)
+            kept = [s for s in subs if s in span_toks]
+            if kept and not any(s in token_set(text) for s in kept):
+                return False
+    return coverage(text, span) >= 0.45
 
 
 def _prompt(question: str, fact: str) -> str:
     return (
-        "Answer in one complete sentence of at least eight words. "
-        "Use only the fact. Do not add country/city/direction words "
-        "that are not in the fact.\n"
+        "Answer the question in the same language as the fact. "
+        "One short sentence. Use only the fact.\n"
         f"Question: {question}\n"
         f"Fact: {fact}"
     )
@@ -57,6 +80,7 @@ class SpanRewriter:
         self._tok = None
         self._model = None
         self._kind = ""
+        self._gen_lock = threading.Lock()
 
     def load(self) -> None:
         if not settings.slm_enabled:
@@ -152,22 +176,23 @@ class SpanRewriter:
     def rewrite(self, query: str, span: str, timeout_ms: float | None = None) -> str:
         if not self.ready or self._tok is None or self._model is None:
             return ""
-        fact = _clip(span, 180)
-        question = _clip(query, 120)
+        fact = _clip(span, 140)
+        question = _clip(query, 80)
         if not fact or not question:
             return ""
         prompt = _prompt(question, fact)
         max_new = max(4, int(settings.slm_max_new_tokens))
         try:
-            if self._kind == "ct2-int8":
-                text = self._generate_ct2(prompt, max_new)
-            else:
-                text = self._generate_hf(prompt, max_new)
+            with self._gen_lock:
+                if self._kind == "ct2-int8":
+                    text = self._generate_ct2(prompt, max_new)
+                else:
+                    text = self._generate_hf(prompt, max_new)
         except Exception as exc:  # noqa: BLE001
             print(f"slm: generate failed ({exc})", flush=True)
             return ""
         text = (text or "").strip()
-        if len(text) > 400 or not rewrite_is_faithful(text, fact):
+        if len(text) > 400 or not rewrite_is_faithful(text, fact, query):
             return ""
         return text
 
@@ -178,7 +203,7 @@ class SpanRewriter:
             [tokens],
             beam_size=1,
             max_decoding_length=max_new,
-            min_decoding_length=8,
+            min_decoding_length=3,
             return_scores=False,
         )
         out_tokens = results[0].hypotheses[0]
@@ -194,7 +219,7 @@ class SpanRewriter:
         )
         generate_kw = {
             "max_new_tokens": max_new,
-            "min_new_tokens": 8,
+            "min_new_tokens": 3,
             "num_beams": 1,
             "do_sample": False,
             "use_cache": True,

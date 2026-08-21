@@ -19,7 +19,6 @@ from voice_rag.stt.sarvam import SarvamError, transcribe
 from voice_rag.types import PipelineResult, StageTiming
 
 rag = VoiceRAG()
-_ask_lock = threading.Lock()
 _live_latencies: list[float] = []
 _bench: dict[str, Any] = {}
 _bench_status = "idle"
@@ -27,8 +26,7 @@ _bench_error = ""
 
 
 def _ask_sync(query: str, **kwargs: Any) -> PipelineResult:
-    with _ask_lock:
-        return rag.ask(query, **kwargs)
+    return rag.ask(query, **kwargs)
 
 
 def _run_startup_sweep() -> None:

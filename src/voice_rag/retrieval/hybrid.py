@@ -12,6 +12,7 @@ from voice_rag.config import settings
 from voice_rag.retrieval.store import FaissIndex
 from voice_rag.textutil import (
     FINANCE_CAPITAL,
+    acronym_alignment,
     bm25_query_tokens,
     capital_alignment,
     content_tokens,
@@ -21,6 +22,9 @@ from voice_rag.textutil import (
     language_shard_candidates,
     looks_like_question,
     query_subjects,
+    short_head_mismatch,
+    subtype_mention,
+    tangent_mention,
     tokenize,
 )
 from voice_rag.types import Chunk, ChunkStrategy, Hit
@@ -106,6 +110,13 @@ def lexical_relevance(query: str, text: str) -> float:
     if re.search(r"\b(?:is|was|are|were) the\b", t_low) and not head.startswith(("what ", "who ", "which ", "where ")):
         defn = 0.35
     defn += definition_alignment(text, query)
+    defn += 0.85 * acronym_alignment(query, text)
+    if tangent_mention(query, text):
+        topic_pen += 1.5
+    if short_head_mismatch(query, text):
+        topic_pen += 1.6
+    if subtype_mention(query, text):
+        topic_pen += 1.5
     cap = 1.15 * capital_alignment(query, text)
     qpen = 0.85 if looks_like_question(text) else 0.0
     subs = query_subjects(query)
@@ -113,6 +124,14 @@ def lexical_relevance(query: str, text: str) -> float:
         topic_pen += 1.25
     if FINANCE_CAPITAL.search(t_low) and subs:
         topic_pen += 1.6
+    if re.search(
+        r"\b(?:connections? to|daily connections|train line|main train)\b|"
+        r"रेल लाइन|दैनिक ट्रेन|ट्रेनें|रेलमार्ग",
+        t_low,
+    ):
+        topic_pen += 1.2
+    if text.count(",") >= 6:
+        topic_pen += 0.7
     if text.count(";") >= 4:
         topic_pen += 0.9
     return 1.5 * spec_hit + 0.75 * cover + 0.7 * phrase + defn + cap - echo - topic_pen - qpen
@@ -148,6 +167,7 @@ class HybridRetriever:
         self._qvec: OrderedDict[str, Any] = OrderedDict()
         self._qvec_max = 512
         self._qvec_lock = threading.Lock()
+        self._search_lock = threading.Lock()
 
     def load(self, directory: Path) -> None:
         db_path = directory / "passages.db"
@@ -240,6 +260,20 @@ class HybridRetriever:
         query_type = query_type or infer_query_type(query)
         top_k = top_k or settings.fused_top_k
         pool_k = max(top_k, int(getattr(settings, "rerank_pool", 48) or 48))
+        with self._search_lock:
+            return self._search_unlocked(
+                query, language=language, query_type=query_type, top_k=top_k, pool_k=pool_k
+            )
+
+    def _search_unlocked(
+        self,
+        query: str,
+        *,
+        language: str,
+        query_type: str,
+        top_k: int,
+        pool_k: int,
+    ) -> list[Hit]:
 
         lists: list[list[str]] = []
         origins: dict[str, list[str]] = defaultdict(list)
@@ -273,12 +307,14 @@ class HybridRetriever:
         if not lists and language != "en" and "en" in self.bm25_shards:
             take(self._bm25_from(query, settings.sparse_top_k, ["en"]), "bm25:en")
 
-        if query_type == "DESCRIPTION":
+        first_ids = lists[0] if lists else []
+        if query_type == "DESCRIPTION" and not self._has_definition(query, first_ids):
             heads = [t for t in specific_terms(query) if t not in {"meaning", "define", "describe"}]
             if heads:
-                take(self._bm25_from(" ".join(heads[:2]), 24, primary), "bm25:head")
+                take(self._bm25_from(" ".join(heads[:2]), 8, primary), "bm25:head")
+            first_ids = lists[0] if lists else first_ids
 
-        if self._needs_dense(query, query_type, lists[0] if lists else []):
+        if self._needs_dense(query, query_type, first_ids):
             take(self._dense(query, settings.dense_top_k), "dense")
 
         fused = rrf(lists)
@@ -346,19 +382,66 @@ class HybridRetriever:
             except Exception:
                 continue
 
+    def _has_definition(self, query: str, ids: list[str]) -> bool:
+        for pid in ids[:4]:
+            ch = self.get_chunk(pid)
+            if ch is not None and definition_alignment(ch.text, query) > 0:
+                return True
+        return False
+
+    def _subject_hit(self, query: str, ids: list[str]) -> bool:
+        subs = query_subjects(query) or specific_terms(query)
+        if not subs:
+            return False
+        need = subs[:2]
+        for pid in ids[:3]:
+            ch = self.get_chunk(pid)
+            if ch is None:
+                continue
+            toks = set(content_tokens(ch.text))
+            if all(s in toks for s in need):
+                return True
+        return False
+
+    def _locates_subject(self, query: str, text: str) -> bool:
+        """True when the passage says where the queried place is, not that a train stops there."""
+        subs = [s for s in query_subjects(query) if s not in {"located", "location", "where"}]
+        if not subs or not text:
+            return False
+        t = text.lower()
+        for s in subs:
+            if re.search(
+                rf"\b{re.escape(s)}\b,?\s+(?:a|is|was)\s+(?:a\s+)?(?:state|city|town|region|district|located|situated)",
+                t,
+            ):
+                return True
+            if re.search(rf"\b{re.escape(s)}\s+is\s+(?:located|situated|a)\b", t):
+                return True
+            if re.search(
+                rf"{re.escape(s)}.{{0,32}}(?:स्थित|वसलेल|ਸਥਿਤ|অবস্থিত|राज्य|तट)",
+                t,
+            ):
+                return True
+        return False
+
     def _needs_dense(self, query: str, query_type: str, ids: list[str]) -> bool:
-        """Dense is the semantic backstop. Skip it only when BM25 already looks right."""
+        """Dense is the semantic backstop. Skip MiniLM+FAISS only when BM25 already answers."""
         if not ids:
-            return True
-        if query_type == "DESCRIPTION":
-            for pid in ids[:4]:
-                ch = self.get_chunk(pid)
-                if ch is not None and definition_alignment(ch.text, query) > 0:
-                    return False
             return True
         if query_type == "LOCATION":
             ch = self.get_chunk(ids[0])
-            return ch is None or capital_alignment(query, ch.text) <= 0
+            return not (ch is not None and self._locates_subject(query, ch.text))
+        if query_type == "DESCRIPTION":
+            if self._has_definition(query, ids):
+                return False
+            ch = self.get_chunk(ids[0])
+            if ch and self._subject_hit(query, ids[:2]) and len(ch.text) > 80 and ch.text.count(";") < 3:
+                return False
+            return True
+        if query_type == "PERSON":
+            return not self._strong_bm25(query, ids)
+        if self._subject_hit(query, ids):
+            return False
         return not self._strong_bm25(query, ids)
 
     def _strong_bm25(self, query: str, ids: list[str]) -> bool:

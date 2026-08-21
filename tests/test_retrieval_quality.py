@@ -2,6 +2,29 @@ from voice_rag.retrieval.hybrid import has_all_specific, lexical_relevance, rrf
 from voice_rag.textutil import capital_alignment, detect_language, infer_query_type
 
 
+def test_lexical_what_is_prefers_definition_not_tangent_or_homonym():
+    sx = "what is spacex?"
+    web = (
+        "The SpaceX website was designed by a San Fransisco design company Nurun "
+        "(Nurun - Design, Human Centered Thinking and Digital Products)."
+    )
+    rockets = "SpaceX designs, manufactures and launches rockets and spacecraft."
+    assert lexical_relevance(sx, rockets) > lexical_relevance(sx, web)
+
+    ai = "what is an ai?"
+    manga = "So, shoujo ai is Girl's Love/GL Girls who love girls."
+    cs = "Artificial intelligence (AI) is an area of computer science."
+    assert lexical_relevance(ai, cs) > lexical_relevance(ai, manga)
+
+    aiq = "what is artificial intelligence?"
+    gofai = (
+        "In artificial intelligence research, GOFAI (Good Old-Fashioned "
+        "Artificial Intelligence) is an approach to achieving artificial intelligence."
+    )
+    area = "Artificial intelligence (AI) is an area of computer science."
+    assert lexical_relevance(aiq, area) > lexical_relevance(aiq, gofai)
+
+
 def test_rrf_boosts_shared_ids():
     fused = rrf([["a", "b", "c"], ["c", "a", "d"]])
     assert fused["a"] > fused["b"]

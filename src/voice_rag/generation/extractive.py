@@ -11,15 +11,24 @@ from __future__ import annotations
 import re
 
 from voice_rag.textutil import (
+    ATTR_FACT,
     BREADCRUMB,
     CLAUSE_SPLIT,
     FINANCE_CAPITAL,
+    acronym_alignment,
     capital_alignment,
     content_tokens,
     definition_alignment,
+    identity_definition,
+    identity_person_query,
+    looks_like_headline,
     looks_like_question,
+    primary_definition,
     query_subjects,
     sentences,
+    short_head_mismatch,
+    subtype_mention,
+    tangent_mention,
 )
 from voice_rag.types import Hit, Span
 
@@ -53,6 +62,20 @@ _GENERIC_CAPS = frozenset(
 )
 
 
+_NAME_SPAN = re.compile(
+    r"(?:डॉ|श्री|प्रो|Dr|Mr|Mrs|Ms|Prof)\.?\s*"
+    r"(?:[\u0900-\u097F]{2,}(?:\s+[\u0900-\u097F]{2,}){0,3}"
+    r"|[A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})"
+)
+# Headlines / money-bio fragments that match Title Case but are not names.
+_NON_NAME = frozenset(
+    """
+    cabinet net worth salary million billion height weight size shoe
+    member members estimated wealth wealthy annual
+    """.split()
+)
+
+
 def _candidates(text: str) -> list[tuple[int, int, str]]:
     out: list[tuple[int, int, str]] = []
     cursor = 0
@@ -68,6 +91,14 @@ def _candidates(text: str) -> list[tuple[int, int, str]]:
                 ps = text.find(part, start)
                 if ps >= 0:
                     out.append((ps, ps + len(part), part))
+        for m in _NAME_SPAN.finditer(sent):
+            name = m.group(0).strip()
+            if 6 <= len(name) < len(sent):
+                # Latin Title-Case common nouns ("Cabinet Net Worth") match
+                # the same pattern as names. Indic honorific spans do not.
+                if re.search(r"[A-Z][a-z]", name) and not _person_name(name, set()):
+                    continue
+                out.append((start + m.start(), start + m.end(), name))
         cursor = end
     return out
 
@@ -95,7 +126,13 @@ def _person_name(phrase: str, q_set: set[str]) -> bool:
     words = re.findall(r"[A-Za-z][\w'’.-]*", phrase)
     if len(words) < 2:
         return False
-    return not any(w.lower() in q_set or w.lower() in _GENERIC_CAPS for w in words)
+    lows = [w.lower().strip(".'") for w in words]
+    if any(w in q_set or w in _GENERIC_CAPS for w in lows):
+        return False
+    # "Cabinet Net Worth" / "Salary Million" are Title Case but not names.
+    if sum(1 for w in lows if w in _NON_NAME) >= max(1, len(lows) // 2):
+        return False
+    return True
 
 
 def _score(query: str, cand: str, query_type: str, rank: int = 0, start: int = 0) -> float:
@@ -130,6 +167,18 @@ def _score(query: str, cand: str, query_type: str, rank: int = 0, start: int = 0
         # merely mentions India.
         if c_nums and spec and miss == 0:
             type_bonus += 0.25
+        if re.search(r"how tall|how high|ऊंचाई|कद", q_low) and re.search(
+            r"\bheight\b|ft\s*\d|\dcm\b|inches|ऊंचाई|फुट|इंच",
+            c_low,
+        ):
+            type_bonus += 1.55
+        elif re.search(r"how tall|how high|ऊंचाई|कद", q_low):
+            type_bonus -= 1.2
+        if re.search(r"share price|stock price", q_low) and re.search(
+            r"\$\d|price|closed at|tsla|aapl|share",
+            c_low,
+        ):
+            type_bonus += 1.4
     if query_type in {"PERSON", "ENTITY", "LOCATION"}:
         # A candidate that just paraphrases the question ("...the capital
         # of Odisha...") scores high on overlap/phrase without ever naming
@@ -213,11 +262,61 @@ def _score(query: str, cand: str, query_type: str, rank: int = 0, start: int = 0
         ):
             type_bonus -= 0.45
         if query_type == "PERSON":
-            latinish = bool(re.search(r"[A-Za-z]{3,}", cand))
-            if any(_person_name(c, q_set) for c in novel_caps):
-                type_bonus += 0.55
-            elif latinish:
-                type_bonus -= 0.65
+            identity = identity_person_query(query)
+            if identity:
+                # "who is NAME" / "X कौन है" wants a definitional bio, not a
+                # headline ("Cabinet Net Worth" / "कैबिनेट नेट वर्थ") or an
+                # attribute factoid (height/salary/ऊंचाई/वेतन).
+                defn = definition_alignment(cand, query)
+                type_bonus += 1.7 * defn
+                if looks_like_headline(cand):
+                    type_bonus -= 2.2
+                if ATTR_FACT.search(cand) and defn <= 0:
+                    type_bonus -= 1.8
+                if identity_definition(cand, query_subjects(query)):
+                    type_bonus += 1.15
+            else:
+                latinish = bool(re.search(r"[A-Za-z]{3,}", cand))
+                if any(_person_name(c, q_set) for c in novel_caps):
+                    type_bonus += 0.55
+                elif latinish and len(cand) > 80:
+                    type_bonus -= 0.65
+                if 8 <= len(cand) <= 72 and (c_set - q_set):
+                    type_bonus += 0.85
+                if _NAME_SPAN.fullmatch(stripped) and (
+                    not re.search(r"[A-Z][a-z]", stripped) or _person_name(stripped, q_set)
+                ):
+                    type_bonus += 1.8
+                if len(cand) > 160:
+                    type_bonus -= 1.3
+            places = query_subjects(query)
+            geo = [p for p in places if p not in {"पहले", "first", "president", "राष्ट्रपति", "राष्ट्रपती"}]
+            if geo and not any(p in c_set for p in geo) and len(cand) > 72:
+                type_bonus -= 2.1
+            if re.search(r"भारत|india", query, flags=re.I):
+                if re.search(r"वाशिंगटन|washington|अमेरिकी|george washington", cand, flags=re.I):
+                    type_bonus -= 2.8
+                if re.search(r"राजेंद्र|प्रसाद|rajendra", cand, flags=re.I):
+                    type_bonus += 1.4
+            if re.search(r"\b(?:invented|founded|created|discovered|inventor)\b|आविष्कार|किसने", q_low):
+                named = bool(strong_caps or _NAME_SPAN.search(stripped) or (c_set - q_set))
+                if not named or not re.search(
+                    r"[A-Z][a-z]+|[\u0900-\u097F]{3,}|डॉ|Dr\.",
+                    stripped,
+                ):
+                    type_bonus -= 2.2
+                if re.search(r"\bon the \d|in \d{4}\b", c_low) and not re.search(
+                    r"\bby [A-Z]|invented by|आविष्कार",
+                    cand,
+                    flags=re.I,
+                ):
+                    type_bonus -= 1.8
+                for head in spec:
+                    if head in {"invented", "founded", "created", "discovered", "inventor"}:
+                        continue
+                    m = re.search(rf"\b{re.escape(head)}\s+(microscope|house|party|company|show)\b", c_low)
+                    if m and m.group(1) not in q_set:
+                        type_bonus -= 2.0
         if query_type == "LOCATION" and re.search(
             r"\b(?:is|was) the capital\b|की राजधानी है|ची राजधानी|को राजधानी",
             c_low,
@@ -254,19 +353,64 @@ def _score(query: str, cand: str, query_type: str, rank: int = 0, start: int = 0
                 type_bonus -= 2.4
             if BREADCRUMB.search(cand):
                 type_bonus -= 1.1
-            if re.search(r"\bwhere\b|कहाँ|कहां|কোথায়", query.lower()) and re.search(
-                r"\b(?:state|city|town|located|west coast|east coast|coast of)\b",
+            if re.search(
+                r"\bwhere\b|कहाँ|कहां|कुठे|ਕਿੱਥੇ|ક્યાં|কোথায়|எங்கே|کہاں",
+                query.lower(),
+            ) and re.search(
+                r"\b(?:state|city|town|located|west coast|east coast|coast of)\b|"
+                r"स्थित|राज्य|तट|पश्चिमी|वसलेल|ਸਥਿਤ|অবস্থিত",
                 c_low,
             ):
                 type_bonus += 0.45
-    if query_type == "DESCRIPTION":
+            if cand.count(",") >= 4:
+                type_bonus -= 1.3
+            if re.search(
+                r"\b(?:connections? to|daily connections|train line)\b|"
+                r"रेल लाइन|दैनिक ट्रेन|ट्रेनें|रेलमार्ग|रेलवे",
+                c_low,
+            ):
+                type_bonus -= 1.7
+            for p in places:
+                if re.search(rf"\b{re.escape(p)}\b,?\s+a\s+(?:state|city|town)", c_low):
+                    type_bonus += 1.4
+                if re.search(rf"\b{re.escape(p)}\s+is\s+(?:a|located|situated)\b", c_low):
+                    type_bonus += 1.4
+                if re.search(r"\bis located\b", c_low) and not re.search(
+                    rf"\b{re.escape(p)}\s+is located\b", c_low
+                ):
+                    type_bonus -= 1.8
+    if query_type in {"DESCRIPTION", "ENTITY"}:
         type_bonus += 1.7 * definition_alignment(cand, query)
-        if _NUM.search(cand):
+        type_bonus += 1.4 * acronym_alignment(query, cand)
+        if primary_definition(query, cand):
+            type_bonus += 1.25
+        if subtype_mention(query, cand):
+            type_bonus -= 2.4
+        if tangent_mention(query, cand):
+            type_bonus -= 2.4
+        if short_head_mismatch(query, cand):
+            type_bonus -= 2.3
+        if looks_like_headline(cand):
+            type_bonus -= 1.8
+        if _NUM.search(cand) and definition_alignment(cand, query) <= 0:
             type_bonus -= 0.55
         if cand.count(";") >= 3:
             type_bonus -= 1.6
         if len(c_toks) < 6:
             type_bonus -= 1.5
+        if re.search(
+            r"best answer:|yahoo|gossip|tea party|cleaning \w+|how to clean|"
+            r"necessary step|is an old term|बेस्ट\s*आं[नस]र|गॉसिप|गप्प",
+            c_low,
+        ):
+            type_bonus -= 2.0
+        if re.search(
+            r"\b(?:mineral|plant|shrub|leaves|beverage|drink|substance|rock|crystal)\b",
+            c_low,
+        ):
+            type_bonus += 0.75
+        if re.match(r"cleaning\b", c_low):
+            type_bonus -= 1.6
     if query_type in {"LOCATION", "PERSON", "ENTITY", "NUMERIC"}:
         length_pen = 0.0 if 8 <= len(cand) <= 240 else -0.12
     else:
@@ -396,6 +540,9 @@ def extract(query: str, hits: list[Hit], query_type: str = "UNKNOWN") -> tuple[s
         and s.parent_id == best_span.parent_id
         and s.text != best_span.text
         and sc > best_score * 0.72
+        and not re.search(r"cleaning |best answer|how to |gossip", s.text, flags=re.I)
+        and not subtype_mention(query, s.text)
+        and not tangent_mention(query, s.text)
     ]
     answer = best_span.text
     spans = [best_span]

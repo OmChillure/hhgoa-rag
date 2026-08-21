@@ -15,7 +15,7 @@ from typing import Any, Callable, Literal, Protocol
 
 from voice_rag.config import settings
 from voice_rag.generation.extractive import extract
-from voice_rag.generation.slm import SpanRewriter
+from voice_rag.generation.slm import SpanRewriter, rewrite_is_faithful
 from voice_rag.guardrails.policy import (
     check_grounding,
     check_input,
@@ -104,8 +104,9 @@ class Harness:
         ret = check_retrieval(hits, query)
         guards.append(ret)
         if not ret.allowed:
-            # one recovery: drop language preference by retrying as English
-            if meta["language"] != "en":
+            # Retry English only when the language shard returned nothing.
+            # Low-confidence Indic hits still won't match the English index.
+            if meta["language"] != "en" and not hits:
                 hits = call("retrieve", query=query, language="en", query_type=meta["query_type"])
                 ret = check_retrieval(hits, query)
                 guards.append(ret)
@@ -138,21 +139,19 @@ class Harness:
                 return self._finish(query, ans, guards, hits, clock, trace, meta)
 
         text = extracted["text"]
-        mode = extracted.get("mode", "extractive")
         coverage = float((ground.details or {}).get("coverage") or 0.0)
         generated = call("generate_answer", query=query, span=text)
         gen_text = str((generated or {}).get("text") or "").strip()
-        if gen_text:
+        if gen_text and rewrite_is_faithful(gen_text, text, query):
             gen_ground = call("ground_check", answer=gen_text, hits=hits)
             guards.append(gen_ground)
             if gen_ground.allowed:
                 text = gen_text
-                mode = "generate"
                 coverage = float((gen_ground.details or {}).get("coverage") or coverage)
 
         ans = Answer(
             text=text,
-            mode=mode,
+            mode="generate",
             confidence=float(extracted.get("confidence") or 0.0),
             spans=extracted.get("spans") or [],
             citations=hits[:4],

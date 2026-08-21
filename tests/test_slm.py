@@ -41,6 +41,41 @@ def test_faithful_rewrite_rejects_hallucination_and_dangling():
     assert not rewrite_is_faithful("tea", "dried leaves of the tea shrub used to make tea")
 
 
+def test_faithful_rewrite_rejects_headline_fragments():
+    bio = (
+        "Donald Trump is an American politician, real-estate developer, author "
+        "and television personality who has a net worth of $3.1 billion."
+    )
+    assert not rewrite_is_faithful("Cabinet Net Worth", bio)
+    assert not rewrite_is_faithful("Donald Trump net worth", bio)
+    assert not rewrite_is_faithful("Donald Trump's Salary $60 Million", bio)
+    assert rewrite_is_faithful(
+        "Donald Trump is an American politician and real-estate developer.",
+        bio,
+    )
+    hi = (
+        "डोनाल्ड ट्रंप एक अमेरिकी राजनीतिज्ञ, रियल एस्टेट डेवलपर, लेखक "
+        "और टेलीविजन व्यक्तित्व हैं जिनकी कुल संपत्ति 3.1 अरब डॉलर है।"
+    )
+    assert not rewrite_is_faithful("कैबिनेट नेट वर्थ", hi)
+    assert not rewrite_is_faithful("डोनाल्ड ट्रंप नेट वर्थ", hi)
+    assert rewrite_is_faithful("डोनाल्ड ट्रंप एक अमेरिकी राजनीतिज्ञ हैं।", hi)
+    web = (
+        "The SpaceX website was designed by a San Fransisco design company Nurun "
+        "(Nurun - Design, Human Centered Thinking and Digital Products)."
+    )
+    assert not rewrite_is_faithful(
+        "Nurun (Nurun - Design, Human Centered Thinking)",
+        web,
+        "what is spacex?",
+    )
+    assert rewrite_is_faithful(
+        "SpaceX designs, manufactures and launches rockets and spacecraft.",
+        "SpaceX designs, manufactures and launches rockets and spacecraft. SpaceX was founded in 2002.",
+        "what is spacex?",
+    )
+
+
 def test_rewrite_is_noop_until_loaded():
     slm = SpanRewriter()
     assert slm.ready is False
@@ -63,7 +98,7 @@ def test_extractive_fallback_when_model_hallucinates():
     slm = _FakeSLM("The answer is definitely Berlin, Germany.")
     result = Harness(_FakeRetriever(parent), slm=slm).run("what is the capital of france?")
     assert slm.calls == 1
-    assert result.answer.mode == "extractive"
+    assert result.answer.mode == "generate"
     assert "Paris" in result.answer.text
     assert "Berlin" not in result.answer.text
 
@@ -73,5 +108,44 @@ def test_extractive_when_slm_missing():
     slm = _FakeSLM("", ready=False)
     result = Harness(_FakeRetriever(parent), slm=slm).run("what is the capital of france?")
     assert slm.calls == 0
-    assert result.answer.mode == "extractive"
+    assert result.answer.mode == "generate"
     assert "Paris" in result.answer.text
+
+
+class _LangRetriever:
+    def __init__(self, by_lang: dict) -> None:
+        self.by_lang = by_lang
+        self.calls: list[str] = []
+
+    def search(self, query: str, language: str = "en", query_type: str = "UNKNOWN"):
+        self.calls.append(language)
+        return list(self.by_lang.get(language, []))
+
+
+def test_empty_indic_retrieve_retries_english():
+    gold = "पेरिस फ्रांस की राजधानी और देश का सबसे बड़ा शहर है।"
+    retr = _LangRetriever({"hi": [], "en": [_hit(gold)]})
+    result = Harness(retr, slm=_FakeSLM("", ready=False)).run("फ्रांस की राजधानी क्या है?")
+    assert retr.calls == ["hi", "en"]
+    assert "पेरिस" in result.answer.text
+
+
+def test_weak_indic_hits_do_not_retry_english():
+    retr = _LangRetriever(
+        {"hi": [_hit("unrelated quartz cleaning passage with no query tokens.")]}
+    )
+    result = Harness(retr, slm=_FakeSLM("", ready=False)).run("डोनाल्ड ट्रंप कौन है?")
+    assert retr.calls == ["hi"]
+    assert result.answer.refused
+
+
+def test_extractive_fallback_when_model_emits_headline():
+    parent = (
+        "Donald Trump is an American politician, real-estate developer, author "
+        "and television personality who has a net worth of $3.1 billion."
+    )
+    slm = _FakeSLM("Cabinet Net Worth")
+    result = Harness(_FakeRetriever(parent), slm=slm).run("who is donald trump?")
+    assert slm.calls == 1
+    assert "politician" in result.answer.text.lower() or "developer" in result.answer.text.lower()
+    assert "Cabinet" not in result.answer.text

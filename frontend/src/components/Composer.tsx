@@ -77,18 +77,6 @@ export function Composer({
     setMic('rec')
   }
 
-  const model = (
-    <select
-      className="mode-select"
-      value="google/flan-t5-small"
-      onChange={() => undefined}
-      title="google/flan-t5-small"
-      aria-label="model"
-    >
-      <option value="google/flan-t5-small">Google Flan-T5</option>
-    </select>
-  )
-
   const actions = (
     <div className="actions">
       <button
@@ -145,7 +133,6 @@ export function Composer({
             if (e.key === 'Enter' && value.trim() && !busy) onSubmit()
           }}
         />
-        {model}
         {actions}
       </div>
     )
@@ -170,7 +157,6 @@ export function Composer({
         }}
       />
       <div className="row">
-        {model}
         {actions}
       </div>
     </div>

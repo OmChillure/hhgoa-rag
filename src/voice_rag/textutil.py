@@ -40,7 +40,8 @@ _SCRIPT_LANG: list[tuple[re.Pattern, str]] = [
     (re.compile(r"[\u0600-\u06FF]"), "ur"),
 ]
 CLAUSE_SPLIT = re.compile(
-    r"\s+(?:and then|but|however|although|because|which|where|while|;|:|—|–)\s+",
+    r"\s+(?:and then|but|however|although|because|which|where|while|;|—|–)\s+"
+    r"|:\s+",
     re.IGNORECASE,
 )
 
@@ -124,8 +125,18 @@ def sentences(text: str) -> list[str]:
     return merged
 
 
+_TOKEN_STRIP = "।.!?؟۔:ः,;\"'()[]"
+
+
 def tokenize(text: str) -> list[str]:
-    return [t.lower() for t in WORD_RE.findall(text or "")]
+    # Danda / Arabic full stop live inside the Indic/Arabic Unicode
+    # blocks, so WORD_RE would otherwise keep "हैं।" as a different
+    # token from "हैं".
+    return [
+        cleaned
+        for t in WORD_RE.findall(text or "")
+        if (cleaned := t.lower().strip(_TOKEN_STRIP))
+    ]
 
 
 def content_tokens(text: str) -> list[str]:
@@ -142,10 +153,12 @@ _CAPITAL_LEX = frozenset(
 _SUBJECT_STOP = frozenset(
     """
     क्या कौन कहाँ कहां है था थे की का के को कौनसी कौनसा
-    कोणती आहे च्या ची चा चे क्याहे
+    कोणती आहे च्या ची चा चे क्याहे कोण
     क्या है எது என்ன கை કઈ કે ਕੀ کیا
-    কোথায় কী কি ಯಾವುದು ഏതാണ് କଣ का अस्ति हो
+    কোথায় কী কি কে ಯಾವುದು ഏതാണ് କଣ का अस्ति हो
     ਦੀ ਦੇ ਦਾ ਹੈ છે এর এরের හෝ
+    कौन हैं कौन है कौन था कौन थे कोण आहे
+    ਕੌਣ કોણ யார் ಯಾರು ആര് ആരാണ് କିଏ కెవరు ఎవరు کون
     """.split()
 )
 _GENITIVE_SUFFIX = frozenset(
@@ -175,6 +188,82 @@ FINANCE_CAPITAL = re.compile(
 )
 BREADCRUMB = re.compile(r"(?:[A-Za-z][\w.'’ -]+\s*>\s*){2,}")
 
+# "who is / who was" across MSMARCO-XI languages. Identity questions
+# ("who is NAME") share this; inventor/president questions also match
+# but are filtered out by ROLE_SEEK.
+WHO_IS = re.compile(
+    r"\bwho\s+(?:is|was|are|were)\b|"
+    r"\b(?:kaun|kon)\s+(?:hai|hain|tha|the)\b|"
+    r"कौन\s*(?:हैं|है|था|थे|थी)|कौन|"
+    r"कोण\s*(?:आहेत|आहे|होते|होता)|कोण|"
+    r"को\s*(?:हुन्|हो|थिए)|"
+    r"ਕੌਣ\s*(?:ਹਨ|ਹੈ|ਸਨ|ਸੀ)|ਕੌਣ|"
+    r"કોણ\s*(?:છે|હતા|હતો)|કોણ|"
+    r"কে\s*(?:ছিলেন|হয়|হলেন)|কোন\s*আছিল|(?:^|[\s])কে(?:\s*[?।]|$)|"
+    r"யார்|"
+    r"ಯಾರು|"
+    r"ആരാണ്|ആര്|"
+    r"କିଏ|"
+    r"ఎవరు|కెవరు|"
+    r"کون\s*(?:ہیں|ہے|تھا|تھے)|کون",
+    re.I,
+)
+ROLE_SEEK = re.compile(
+    r"\b(?:invented|founded|created|discovered|inventor|president|minister|"
+    r"prime|ceo|king|queen|captain|director|author|writer|leader|"
+    r"first|1st|second|2nd)\b|"
+    r"किसने|आविष्कार|आविष्कर्ता|"
+    r"राष्ट्रपति|राष्ट्रपती|राष्ट्रप|उपराष्ट्र|"
+    r"पहले|प्रथम|पहिला|पहिलो|पहिले|"
+    r"प्रधानमंत्री|मंत्री|राजा|रानी|"
+    r"ਰਾਸ਼ਟਰਪਤੀ|ਪਹਿਲੇ|ਮੰਤਰੀ|"
+    r"রাষ্ট্রপতি|প্রথম|"
+    r"குடியரசு|முதல்|"
+    r"ರಾಷ್ಟ್ರಪತಿ|"
+    r"രാഷ്ട്രപതി|"
+    r"ରାଷ୍ଟ୍ରପତି|"
+    r"صدر|پہلے|اختراع|"
+    r"અધ્યક્ષ|પ્રથમ",
+    re.I,
+)
+INDEF = re.compile(
+    r"(?:^|[\s,])(?:एक|एखाद|ਇੱਕ|એક|একজন|এজন|এক|ఒక|ಒಬ್ಬ|ഒരു|ଜଣେ|ஒரு|ایک)\s",
+)
+_ZERO_COPULA_DEF = re.compile(r"একজন|এজন")
+COPULA = re.compile(
+    r"(?:हैं|है|था|थे|थी|होते|होता|आहेत|आहे|अस्ति|"
+    r"ਹਨ|ਹੈ|ਸਨ|ਸੀ|છે|હતા|હતો|"
+    r"হন|হয়|ছিলেন|আছেন|ছিল|"
+    r"ஆவார்|ஆவர்|என்பவர்|"
+    r"ಆಗಿದ್ದಾರೆ|ಆಗಿದ್ದಾನೆ|"
+    r"ആണ്|ആയിരുന്നു|"
+    r"ଅଟନ୍ତି|ଅଟେ|"
+    r"ہیں|ہے|تھا|تھے|"
+    r"\bis\b|\bare\b|\bwas\b|\bwere\b)",
+    re.I,
+)
+ATTR_FACT = re.compile(
+    r"\b(?:net worth|salary|height|weight|shoe size|cabinet)\b|"
+    r"how tall|how much (?:does|is|each)|"
+    r"'s height|'s salary|'s net worth|ft \d|\dlbs\b|\$\d|"
+    r"नेट\s*वर्थ|कुल संपत्ति|सम्पत्ति|संपत्ति|"
+    r"वेतन|सैलरी|तनख्वाह|"
+    r"ऊंचाई|उंचाई|लंबाई|कद|"
+    r"वजन|भार|"
+    r"जूते|साइज़|साइज|"
+    r"कैबिनेट|"
+    r"निव्वळ\s*मालमत्ता|उंची|पगार|"
+    r"ਕੁੱਲ ਜਾਇਦਾਦ|ਉਚਾਈ|ਤਨਖਾਹ|ਕੈਬਿਨੇਟ|"
+    r"ચોખ્ખી સંપત્તિ|ઊંચાઈ|પગાર|"
+    r"নেট\s*ওয়ার্থ|সম্পত্তি|উচ্চতা|বেতন|ক্যাবিনেট|"
+    r"நிகர\s*மதிப்பு|உயரம்|சம்பளம்|"
+    r"مالیت|قد|تنخواہ|کابینہ|"
+    r"ಎತ್ತರ|ಸಂಬಳ|"
+    r"ഉയരം|ശമ്പളം|"
+    r"ଉଚ୍ଚତା|ଦରମା",
+    re.I,
+)
+
 
 def query_subjects(query: str) -> list[str]:
     """Place/entity the question is about, minus 'capital' / question words."""
@@ -184,7 +273,7 @@ def query_subjects(query: str) -> list[str]:
         if t not in _CAPITAL_LEX
         and t not in _SUBJECT_STOP
         and t not in STOP
-        and len(t) >= 3
+        and (len(t) >= 3 or (len(t) == 2 and t.isascii() and t.isalpha()))
     ]
 
 
@@ -221,6 +310,8 @@ def capital_alignment(query: str, text: str) -> float:
     subjects = query_subjects(query)
     if not subjects or not text:
         return 0.0
+    if _METAPHOR_CAPITAL.search(text) and not _METAPHOR_CAPITAL.search(query):
+        return -1.0
     owners: list[str] = []
     for m in _CAPITAL_MARK.finditer(text):
         owners.append(" ".join(content_tokens(text[: m.start()])[-3:]))
@@ -233,6 +324,183 @@ def capital_alignment(query: str, text: str) -> float:
     return -1.0
 
 
+_ORG_PRED = re.compile(
+    r"\b(?:designs|manufactures|builds|provides|operates|makes|creates|"
+    r"offers|develops|launches|produces|sells|runs)\b",
+    re.I,
+)
+_TANGENT_NOUN = (
+    r"website|web site|webpage|homepage|logo|twitter|account|app|"
+    r"stock|share|tweet|client list|fan page|"
+    r"वेबसाइट|वेबसाईट|जालस्थल|लोगो|"
+    r"ਵੈੱਬਸਾਈਟ|ওয়েবসাইট|இணையதளம்|ویب\s*سائٹ"
+)
+_GEN = r"की|का|के|ची|चा|चे|ਦੀ|ના|এর|யின்"
+_TANGENT_FREE = re.compile(
+    r"\b(?:client list|see tweet|hasn't been added to their|"
+    r"how to (?:delete|hack|install|download|remove|buy)|"
+    r"(?:wifi |wi-?fi )?password|coupon codes?|whois|"
+    r"buy this domain|lyrics:)\b|"
+    r"कैसे\s*(?:डिलीट|हैक|हटा|डाउनलोड)|पासवर्ड|"
+    r"बेस्ट\s*आं[नस]र|गॉसिप|गप्प|"
+    r"কিভাবে|পাসওয়ার্ড|"
+    r"ਕਿਵੇਂ|ਪਾਸਵਰਡ|"
+    r"எப்படி|"
+    r"کیسے|پاس\s*ورڈ",
+    re.I,
+)
+_SUBTYPE = re.compile(
+    r"\bis an?\s+(?:approach|method|technique|algorithm|subset|branch|"
+    r"subfield|variant|style|framework|paradigm|extension)\s+"
+    r"(?:to|of|for)\b|"
+    r"प्राप्त करने का एक\s*(?:दृष्टिकोण|विधि|पद्धति|तरीका)|"
+    r"(?:एक\s+)?(?:दृष्टिकोण|उपागम)\s*(?:है|हैं)|"
+    r"অর্জনের একটি\s*(?:পদ্ধতি|পন্থা)|"
+    r"அணுகுமுறை|"
+    r"طریقہ\s*کار|"
+    r"दृष्टिकोन",
+    re.I,
+)
+_METAPHOR_CAPITAL = re.compile(
+    r"(?:पाक|फैशन|सांस्कृतिक|खेल|फिल्म|वित्तीय|आर्थिक|व्यावसायिक)\s*राजधानी|"
+    r"ਵਿੱਤੀ\s*ਰਾਜਧਾਨੀ|ਸੱਭਿਆਚਾਰਕ\s*ਰਾਜਧਾਨੀ|"
+    r"আর্থিক\s*রাজধানী|সাংস্কৃতিক\s*রাজধানী|"
+    r"நிதித்\s*தலைநகரம்|பண்பாட்டு\s*தலைநகரம்|"
+    r"(?:مالی|ثقافتی|پاک)\s*دارالحکومت|"
+    r"(?:culinary|fashion|cultural|film|sports|food|pak|financial)\s+capital",
+    re.I,
+)
+def _query_heads(query: str) -> list[str]:
+    """Content heads of a what/who question, including 2-letter acronyms (ai)."""
+    out: list[str] = []
+    for t in content_tokens(query):
+        if t in _SUBJECT_STOP or t in STOP or t in _CAPITAL_LEX:
+            continue
+        if len(t) >= 3 or (len(t) == 2 and t.isascii() and t.isalpha()):
+            if t not in out:
+                out.append(t)
+    return out or query_subjects(query)
+
+
+def _short_acronym_head(query: str) -> str | None:
+    """Single 2–3 letter head ('ai', 'gpu'). Not 'flow' in a multi-word question."""
+    heads = _query_heads(query)
+    if len(heads) != 1:
+        return None
+    h = heads[0]
+    if 2 <= len(h) <= 3 and h.isascii() and h.isalpha():
+        return h
+    return None
+
+
+def acronym_alignment(query: str, text: str) -> float:
+    """+1 when a short query head is expanded in the passage: 'Artificial Intelligence (AI)'."""
+    if not query or not text:
+        return 0.0
+    h = _short_acronym_head(query)
+    if not h:
+        return 0.0
+    if re.search(rf"\({re.escape(h)}\)", text, flags=re.I):
+        return 0.9
+    if re.search(rf"\b{re.escape(h)}\s+\([^)]{{6,}}\)", text, flags=re.I):
+        return 0.9
+    return 0.0
+
+
+def tangent_mention(query: str, text: str) -> bool:
+    """True when the subject is only a modifier (SpaceX website designed by …)."""
+    if not query or not text:
+        return False
+    for s in _query_heads(query):
+        if re.search(
+            rf"{re.escape(s)}\w{{0,4}}(?:'s)?(?:\s+(?:{_GEN}))?\s+(?:{_TANGENT_NOUN})",
+            text,
+            flags=re.I,
+        ):
+            return True
+        if re.search(
+            rf"\b{re.escape(s)}\w{{0,4}}\s+was\s+designed\s+by\b",
+            text,
+            flags=re.I,
+        ):
+            return True
+    if _TANGENT_FREE.search(text):
+        heads = _query_heads(query)
+        tset = set(content_tokens(text))
+        if heads and any(h in tset or h in text.lower() for h in heads):
+            return True
+    return False
+
+
+def primary_definition(query: str, text: str) -> bool:
+    """True when the copula's subject *is* the queried thing.
+
+    'Artificial intelligence (AI) is an area of…' is primary.
+    'GOFAI is an approach to achieving artificial intelligence' is not.
+    """
+    heads = _query_heads(query)
+    if not heads or not text:
+        return False
+    if re.search(
+        r"best answer:|is an old term|yahoo|gossip|tea party|how to |"
+        r"बेस्ट\s*आं[नस]र|गॉसिप",
+        text,
+        flags=re.I,
+    ):
+        return False
+    name = " ".join(heads)
+    if re.search(
+        rf"(?:^|[\s.])(?:the\s+)?{re.escape(name)}\s*(?:\([^)]{{1,40}}\)\s*)?"
+        r"(?:is|are|was|were|means)\s+an?\b",
+        text,
+        flags=re.I,
+    ):
+        return True
+    if 2 <= len(heads) <= 5 and all(h.isascii() and h.isalpha() for h in heads):
+        acr = "".join(h[0] for h in heads)
+        if re.search(
+            rf"\({re.escape(acr)}\)\s*(?:is|are|was|were|means)\s+an?\b",
+            text,
+            flags=re.I,
+        ):
+            return True
+    # Indic: the queried name must lead the sentence, then indef + copula.
+    # "कृत्रिम बुद्धिमत्ता … एक शाखा है" yes; "गोफाई कृत्रिम बुद्धिमत्ता …" no.
+    lead = content_tokens(text)
+    if (
+        lead
+        and lead[0] == heads[0]
+        and all(h in lead[: max(3, len(heads) + 1)] for h in heads[:2])
+        and INDEF.search(text)
+        and (COPULA.search(text) or _ZERO_COPULA_DEF.search(text))
+    ):
+        return True
+    return False
+
+
+def subtype_mention(query: str, text: str) -> bool:
+    """True when the span defines a *kind of* the queried thing, not the thing."""
+    if not query or not text or not _SUBTYPE.search(text):
+        return False
+    return not primary_definition(query, text)
+
+
+def short_head_mismatch(query: str, text: str) -> bool:
+    """True when a short head is used as another word (shoujo ai) not an acronym."""
+    if not query or not text:
+        return False
+    h = _short_acronym_head(query)
+    if not h:
+        return False
+    if re.search(rf"\({re.escape(h)}\)", text, flags=re.I):
+        return False
+    if re.search(rf"\b[a-z]{{4,}}\s+{re.escape(h)}\b", text):
+        return True
+    if re.search(rf"^{re.escape(h)}\s*=", text, flags=re.I):
+        return True
+    return False
+
+
 def definition_alignment(text: str, query: str = "") -> float:
     """Definitional lead-in vs number-heavy factoid.
 
@@ -240,19 +508,64 @@ def definition_alignment(text: str, query: str = "") -> float:
     ("a fugue is a piece…"), not "Otis is an American company".
     """
     head = (text or "")[:360]
+    if query and (
+        tangent_mention(query, head)
+        or short_head_mismatch(query, head)
+        or subtype_mention(query, head)
+    ):
+        if len(re.findall(r"\d", head)) >= 4:
+            return -0.55
+        return 0.0
     if _DEFN_MARK.search(head):
         return 0.85
     if query:
-        for tok in content_tokens(query):
-            if len(tok) < 3:
+        for tok in _query_heads(query):
+            stem = tok[:-1] if tok.endswith("s") and tok.isascii() and len(tok) > 3 else tok
+            if re.search(
+                r"best answer:|yahoo|gossip|tea party|cleaning \w+|how to clean|"
+                r"necessary step|is an old term",
+                head,
+                flags=re.I,
+            ):
                 continue
-            stem = tok[:-1] if tok.endswith("s") and tok.isascii() else tok
+            if re.search(
+                rf"\b{re.escape(stem)}\w{{0,4}}\s+(?:is|are|means)\s+an?\s+"
+                r"(?:necessary|old|good|important|great|common|popular)\b",
+                head,
+                flags=re.I,
+            ):
+                continue
             if re.search(
                 rf"\b{re.escape(stem)}\w{{0,4}}\s+(?:is|are|means)\s+an?\b",
                 head,
                 flags=re.I,
             ):
                 return 0.85
+            # "Artificial intelligence (AI) is an area…"
+            if re.search(
+                rf"\({re.escape(tok)}\)\s*(?:is|are|means)\s+an?\b",
+                head,
+                flags=re.I,
+            ):
+                return 0.85
+            if re.search(
+                rf"\b{re.escape(stem)}\w{{0,4}}\s+\([^)]{{0,40}}\)\s*(?:is|are|means)\s+an?\b",
+                head,
+                flags=re.I,
+            ):
+                return 0.85
+            # "SpaceX designs, manufactures and launches rockets"
+            if re.search(rf"\b{re.escape(stem)}\w{{0,4}}\s+", head, flags=re.I) and _ORG_PRED.search(head):
+                if re.search(
+                    rf"\b{re.escape(stem)}\w{{0,4}}\s+{_ORG_PRED.pattern}",
+                    head,
+                    flags=re.I,
+                ):
+                    return 0.85
+            # Indic: "ट्रंप एक अमेरिकी राजनीतिज्ञ हैं" / "ট্রাম্প একজন রাজনীতিবিদ"
+            if re.search(re.escape(stem), head, flags=re.I) and INDEF.search(head):
+                if COPULA.search(head) or _ZERO_COPULA_DEF.search(head):
+                    return 0.85
     if len(re.findall(r"\d", head)) >= 4:
         return -0.55
     return 0.0
@@ -319,32 +632,97 @@ def char_windows(text: str, size: int, overlap: int) -> list[tuple[int, int, str
     return out
 
 
+def identity_person_query(query: str) -> bool:
+    """True when the person is already named and we need a description.
+
+    "who is Donald Trump" / "ट्रंप कौन है" is identity.
+    "who invented X" / "पहले राष्ट्रपति कौन थे" still want a short name.
+    """
+    if not WHO_IS.search(query or ""):
+        return False
+    return not ROLE_SEEK.search(query)
+
+
+def looks_like_headline(text: str) -> bool:
+    """Catalog/title fragment, not a sentence — Latin Title Case or Indic noun pile."""
+    s = (text or "").strip().rstrip("।.!?؟۔:")
+    if not s or len(s) > 80:
+        return False
+    if COPULA.search(s):
+        return False
+    words = [w for w in s.split() if w]
+    if len(words) < 2:
+        return False
+    if re.search(r"[A-Za-z]", s):
+        caps = sum(1 for w in words if w[:1].isupper() or w[:1].isdigit() or w[:1] in "$")
+        if caps >= max(2, int(0.7 * len(words))):
+            return True
+    if ATTR_FACT.search(s) and len(words) <= 10:
+        return True
+    raw = (text or "").strip()
+    if raw.endswith(":") or raw.endswith("ः"):
+        return True
+    return False
+
+
+def identity_definition(cand: str, subjects: list[str]) -> bool:
+    """Candidate defines the queried name: 'X is an…' / 'X एक … हैं'."""
+    if not cand or not subjects:
+        return False
+    c_toks = content_tokens(cand)
+    if not c_toks:
+        return False
+    if not any(s in c_toks for s in subjects[:2]):
+        return False
+    cl = cand.lower()
+    name = " ".join(subjects[:2])
+    if name and re.search(
+        rf"^{re.escape(name)}\s+(?:is|was|are|were)\s+(?:an?\s+)?",
+        cl,
+    ):
+        return True
+    if INDEF.search(cand) and COPULA.search(cand):
+        return True
+    # Bengali/Assamese present-tense bios often drop the copula.
+    return bool(_ZERO_COPULA_DEF.search(cand))
+
+
 def infer_query_type(query: str) -> str:
     q = (query or "").lower()
     if re.search(
-        r"\b(how many|how much|what year|when was|when did|population|age|number of|percentage|percent)\b"
-        r"|जनसंख्या|कितने|कितनी|সংখ্যা|எத்தனை|વસ્તી|ਆਬਾਦੀ|آبادی",
+        r"\b(how many|how much|how tall|how high|how long|how heavy|how old|how wide|"
+        r"what year|when was|when did|population|age|number of|percentage|percent|"
+        r"share price|stock price)\b"
+        r"|जनसंख्या|कितने|कितनी|कितना|ऊंचाई|সংখ্যা|எத்தனை|વસ્તી|ਆਬਾਦੀ|آبادی",
         q,
     ):
         return "NUMERIC"
     if re.search(
-        r"\b(where|which city|which country|located|capital of)\b"
-        r"|राजधानी|राजधानी|தலைநகரம்|રાજધાની|ਰਾਜਧਾਨੀ|دارالحکومت|തലസ്ഥാനം|ರಾಜಧಾನಿ|ରାଜଧାନୀ|রাজধানী|ৰাজধানী",
+        r"\b(where|which city|which country|located|capital)\b"
+        r"|राजधानी|தலைநகரம்|રાજધાની|ਰਾਜਧਾਨੀ|دارالحکومت|തലസ്ഥാനം|ರಾಜಧಾನಿ|ରାଜଧାନୀ|রাজধানী|ৰাজধানী"
+        r"|कहाँ|कहां|कुठे|ਕਿੱਥੇ|ક્યાં|কোথায়|எங்கே|کہاں|ಎಲ್ಲಿ|എവിടെ",
         q,
     ):
         return "LOCATION"
     if re.search(
-        r"\b(who is|who was|who were|who invented|which person|invented by|founded by)\b"
-        r"|किसने|कौन थे|कौन है|कौन था|कोण होते|को थिए|யார்|કોણ|ਕੌਣ|کون |ആര്|ಯಾರು|କିଏ|কে ছিলেন|কোন আছিল",
+        r"\b(who is|who was|who were|who invented|which person|invented by|founded by|who)\b"
+        r"|\b(?:kaun|kon)\s+(?:hai|hain|tha|the)\b"
+        r"|किसने|कौन थे|कौन है|कौन था|कौन हैं|कौन|"
+        r"कोण आहेत|कोण आहे|कोण होते|कोण|"
+        r"को थिए|को हो|"
+        r"யார்|કોણ|ਕੌਣ|کون |کون|"
+        r"ആരാണ്|ആര്|ಯಾರು|କିଏ|"
+        r"কে ছিলেন|কোন আছিল|(?:^|[\s])কে(?:\s*[?।]|$)|"
+        r"ఎవరు|కెవరు",
         q,
     ):
         return "PERSON"
     if re.search(
-        r"\b(what is|what are|what does|define|meaning of|meaning|describe)\b"
-        r"|क्या है|क्या होता|என்ன|શું છે|ਕੀ ਹੈ|کیا ہے|എന്താണ്|ಯಾವುದು|କଣ|কী\?| কি\?",
+        r"\b(what is|what are|what does|what|define|meaning of|meaning|describe|explain|tell me about|about)\b"
+        r"|क्या है|क्या होता|क्या|म्हणजे काय|என்ன|શું છે|ਕੀ ਹੈ|کیا ہے|എന്താണ്|ಯಾವುದು|କଣ|কী\?| কি\?",
         q,
     ):
         return "DESCRIPTION"
-    if re.search(r"\b(which|who|what company|what organization)\b", q):
+    if re.search(r"\b(which|what company|what organization)\b", q):
         return "ENTITY"
-    return "UNKNOWN"
+    return "DESCRIPTION"

@@ -33,11 +33,11 @@ class Settings(BaseSettings):
     tfidf_features: int = 12000
 
     # Retrieval
-    dense_top_k: int = 16
-    sparse_top_k: int = 16
-    fused_top_k: int = 8
-    rerank_pool: int = 16
-    faiss_nprobe: int = 8
+    dense_top_k: int = 8
+    sparse_top_k: int = 10
+    fused_top_k: int = 6
+    rerank_pool: int = 8
+    faiss_nprobe: int = 6
     faiss_threads: int = 1
     parent_expand: int = 6
     min_retrieval_score: float = 0.012
@@ -48,8 +48,8 @@ class Settings(BaseSettings):
 
     # Tiny local generator — always runs after extract
     slm_enabled: bool = Field(default=True, alias="VAANI_SLM")
-    slm_model: str = Field(default="google/flan-t5-small", alias="VAANI_SLM_MODEL")
-    slm_max_new_tokens: int = 24
+    slm_model: str = Field(default="bigscience/mt0-small", alias="VAANI_SLM_MODEL")
+    slm_max_new_tokens: int = 14
     slm_timeout_ms: float = 80.0
     slm_threads: int = Field(default=2, alias="VAANI_SLM_THREADS")
     slm_cache_dir: Path = Field(default=ROOT / "models", alias="VAANI_SLM_CACHE")
