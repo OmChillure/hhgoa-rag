@@ -20,9 +20,6 @@ ENV PYTHONPATH=/app/src \
     VAANI_HOST=0.0.0.0 \
     VAANI_PORT=8080 \
     VAANI_INDEX_DIR=/app/vaani_index \
-    PYTHONUNBUFFERED=1 \
-    OMP_NUM_THREADS=1 \
-    OPENBLAS_NUM_THREADS=1 \
-    MKL_NUM_THREADS=1
+    PYTHONUNBUFFERED=1
 EXPOSE 8080
 CMD ["python", "scripts/serve.py"]
